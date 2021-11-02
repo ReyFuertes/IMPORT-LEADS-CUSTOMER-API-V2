@@ -16,7 +16,7 @@ export class CustomerRoleRepository extends Repository<CustomerRole> {
     results.forEach((result: any) => {
       delete result.customer.password;
       delete result.customer.salt;
-      delete result.customer.customername
+      delete result.customer.username
     });
     const ret = results.map(r => r.role.level);
     return ret;

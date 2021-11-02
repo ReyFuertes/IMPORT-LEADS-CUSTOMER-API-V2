@@ -17,7 +17,7 @@ export class CustomerAccessRepository extends Repository<CustomerAccess> {
     results.forEach((result: any) => {
       delete result.customer.password;
       delete result.customer.salt;
-      delete result.customer.customername
+      delete result.customer.username
     });
 
     let fmt_results = results.map(r => {

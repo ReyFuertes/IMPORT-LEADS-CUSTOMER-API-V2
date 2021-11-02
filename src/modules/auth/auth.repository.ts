@@ -17,10 +17,10 @@ import { IAccessDto } from '../access/access.dto';
 @EntityRepository(Customer)
 export class AuthRepository extends Repository<Customer> {
   async signUp(dto: any, curr_customer: any): Promise<any[]> {
-    const { customername, password, customer_access, customer_role, customer_profile } = dto;
+    const { username, password, customer_access, customer_role, customer_profile } = dto;
 
     const customer = new Customer();
-    customer.customername = String(customername).toLowerCase();
+    customer.username = String(username).toLowerCase();
     customer.salt = await bcrypt.genSalt();
     customer.password = await this.hashPassword(password, customer.salt);
 
@@ -121,8 +121,8 @@ export class AuthRepository extends Repository<Customer> {
   }
 
   async validatePassword(authCredsDto: AuthCredentialDto): Promise<Customer> {
-    const { customername, password } = authCredsDto;
-    const customer = await this.findOne({ customername: String(customername).toLowerCase() },
+    const { username, password } = authCredsDto;
+    const customer = await this.findOne({ username: String(username).toLowerCase() },
       { relations: ['customer_profile'] });
 
     if (customer && await customer.validatePassword(password)) {

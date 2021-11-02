@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { BaseService } from '../../base.service';
 import { AuthCredentialDto, ICustomerAuthDto } from './auth.dto';
 import { JwtService } from '@nestjs/jwt';
-import { AuthRepository } from './auth-repository';
+import { AuthRepository } from './auth.repository';
 import { Customer } from '../customer/customer.entity';
 import { ICustomerDto } from '../customer/customer.dto';
 
@@ -19,10 +19,10 @@ export class AuthService extends BaseService<Customer> {
       if (!customer) {
         throw new UnauthorizedException('Invalid request!');
       } else {
-        const payload = { id: customer.id, customername: customer.customername };
+        const payload = { id: customer.id, username: customer.username };
         const accessToken = await this.jwtSrv.sign(payload);
 
-        return { accessToken, customer: { id: customer?.id, customername: customer?.customername, image: customer?.customer_profile?.image } };
+        return { accessToken, customer: { id: customer?.id, username: customer?.username, image: customer?.customer_profile?.image } };
       }
     } catch (error) {
       throw new BadRequestException('Invalid credentials!');

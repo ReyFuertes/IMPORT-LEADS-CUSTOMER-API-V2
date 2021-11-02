@@ -1,5 +1,5 @@
 import { ICustomerProfileDto } from "src/modules/customer-profile/customer-profile.dto";
-import { GetDto } from "src/models/generic.model";
+import { CustomerRoleType, GetDto } from "src/models/generic.model";
 import { ICustomerAccessDto } from "src/modules/customer-access/customer-access.dto";
 import { ICustomerRoleDto } from "src/modules/customer-role/customer-role.dto";
 
@@ -10,10 +10,10 @@ export enum CustomerStatusType {
 }
 export interface ICustomerDto {
   id?: string;
-  customername?: string;
+  username?: string;
   password?: string;
   salt?: string;
-  status?: number;
+  status?: CustomerStatusType;
   customer_profile?: ICustomerProfileDto;
   customer_access?: ICustomerAccessDto[];
   customer_role?: ICustomerRoleDto[];

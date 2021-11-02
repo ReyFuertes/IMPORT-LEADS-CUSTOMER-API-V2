@@ -1,7 +1,7 @@
 import { BaseEntity, PrimaryGeneratedColumn, Generated, Column, Entity, Unique, OneToMany } from "typeorm";
 import { CustomerRole } from '../customer-role/customer-role.entity';
 
-@Entity({ synchronize: true })
+@Entity({ synchronize: false })
 export class Role extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')

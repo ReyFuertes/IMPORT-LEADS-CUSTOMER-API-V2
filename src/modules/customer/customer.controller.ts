@@ -7,13 +7,18 @@ import { CustomerService } from './customer.service';
 export class CustomerController {
   constructor(private srv: CustomerService) { }
 
+  @Get()
+  getAll(@Query() dto: any): Promise<any[]> {
+    return this.srv.getCustomers(dto);
+  }
+
   @Post()
-  create(@Body() dto: any, @Req() req: any): Promise<ICustomerDto[]> {
-    return this.srv.createCustomer(dto, req?.customer);
+  create(@Body() dto: any, @Req() req: any): Promise<any> {
+    return this.srv.createCustomer(dto);
   }
 
   @Patch()
-  @UseGuards(AuthGuard('jwt'))
+  // @UseGuards(AuthGuard('jwt'))
   update(@Body() dto: ICustomerDto): Promise<void> {
     return this.srv.updateCustomer(dto);
   }

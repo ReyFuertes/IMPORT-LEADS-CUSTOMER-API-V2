@@ -15,6 +15,6 @@ async function bootstrap() {
       allowedHeaders: 'Content-Type, Authorization',
   });
   app.setGlobalPrefix('api/v1');
-  await app.listen(3100);
+  await app.listen(3500);
 }
 bootstrap();

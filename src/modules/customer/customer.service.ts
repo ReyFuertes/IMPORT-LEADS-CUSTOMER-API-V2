@@ -11,11 +11,15 @@ export class CustomerService extends BaseService<Customer> {
     super(repo);
   }
 
+  async getCustomers(dto: any): Promise<any> {
+    return this.repo.getCustomers(dto);
+  }
+
   async updateCustomer(dto: ICustomerDto): Promise<void> {
     return this.repo.updateCustomer(dto);
   }
 
-  async createCustomer(dto: any, curr_customer?: ICustomerDto): Promise<ICustomerDto[]> {
-    return this.repo.createCustomer(dto, curr_customer);
+  async createCustomer(dto: any): Promise<any> {
+    return this.repo.createCustomer(dto);
   }
 }

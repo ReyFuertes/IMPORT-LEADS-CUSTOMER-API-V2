@@ -1,11 +1,12 @@
 import { IsOptional, IsNotEmpty } from 'class-validator';
 
 export enum CustomerRoleType {
-  admin = 'admin',
+  sp = 'sp',
+  client = 'client',
   manager = 'manager',
   inspector = 'inspector',
-  sp = 'sp',
-  client = 'client'
+  admin = 'admin',
+  master = 'master'
 }
 
 export enum sqlOp {

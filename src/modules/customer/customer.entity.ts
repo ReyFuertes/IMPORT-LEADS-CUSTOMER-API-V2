@@ -3,16 +3,17 @@ import * as bcrypt from 'bcrypt'
 import { CustomerProfile } from '../customer-profile/customer-profile.entity';
 import { CustomerAccess } from '../customer-access/customer-access.entity';
 import { CustomerRole } from '../customer-role/customer-role.entity';
+import { CustomerRoleType } from "src/models/generic.model";
 
-@Entity({ synchronize: true })
-@Unique(['customername'])
+@Entity({ synchronize: false })
+@Unique(['username'])
 export class Customer extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')
   id: string;
 
   @Column({ nullable: true })
-  customername: string;
+  username: string;
 
   @Column({ nullable: true })
   password: string;

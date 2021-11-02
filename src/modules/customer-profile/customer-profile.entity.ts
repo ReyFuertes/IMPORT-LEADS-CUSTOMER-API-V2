@@ -1,7 +1,7 @@
 import { BaseEntity, PrimaryGeneratedColumn, Generated, ManyToOne, OneToOne, Column, Entity, CreateDateColumn } from "typeorm";
 import { Customer } from "src/modules/customer/customer.entity";
 
-@Entity({ synchronize: true })
+@Entity({ synchronize: false })
 export class CustomerProfile extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')
@@ -17,7 +17,7 @@ export class CustomerProfile extends BaseEntity {
   language: string;
 
   @Column({ nullable: true })
-  phone: string;
+  phone_number: string;
 
   @Column({ nullable: true })
   email: string;

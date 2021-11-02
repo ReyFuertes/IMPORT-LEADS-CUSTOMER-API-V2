@@ -4,18 +4,18 @@ export interface ICustomerAuthDto {
   accessToken: string,
   customer: {
     id: string,
-    customername: string,
+    username: string,
     image: string
   }
 }
 export interface JwtPayload {
-  customername: string;
+  username: string;
 }
 export class AuthCredentialDto {
   @IsString()
   @MinLength(3)
   @MaxLength(120)
-  customername: string;
+  username: string;
 
   @IsString()
   @MinLength(3)

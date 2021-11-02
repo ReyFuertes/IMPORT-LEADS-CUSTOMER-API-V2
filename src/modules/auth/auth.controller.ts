@@ -13,7 +13,7 @@ export class AuthController {
   }
 
   @Post('/signup')
-  @UseGuards(AuthGuard('jwt'))
+  // @UseGuards(AuthGuard('jwt'))
   signUp(@Body(ValidationPipe) dto: AuthCredentialDto, @Req() req: any): Promise<any[]> {
     return this.srv.signUp(dto, req?.customer)
   }

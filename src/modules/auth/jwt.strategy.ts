@@ -4,7 +4,7 @@ import { } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { JwtPayload } from "./auth.dto";
 import { Customer } from "src/modules/customer/customer.entity";
-import { AuthRepository } from "./auth-repository";
+import { AuthRepository } from "./auth.repository";
 
 @Injectable()
 export class JwtStategy extends PassportStrategy(Strategy) {
@@ -17,8 +17,8 @@ export class JwtStategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload): Promise<Customer> {
-    const { customername } = payload;
-    const customer = await this.repo.findOne({ customername });
+    const { username } = payload;
+    const customer = await this.repo.findOne({ username });
     if (!customer) {
       throw new UnauthorizedException('Unauthorized');
     }

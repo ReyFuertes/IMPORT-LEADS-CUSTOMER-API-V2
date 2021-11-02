@@ -2,7 +2,7 @@ import { BaseEntity, PrimaryGeneratedColumn, Generated, Entity, ManyToOne, JoinC
 import { Customer } from '../customer/customer.entity';
 import { Access } from '../access/access.entity';
 
-@Entity({ synchronize: true })
+@Entity({ synchronize: false })
 export class CustomerAccess extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')
