@@ -1,7 +1,7 @@
 import { BaseEntity, PrimaryGeneratedColumn, Generated, Column, Entity, Unique, OneToMany, JoinColumn, ManyToOne } from "typeorm";
-import { CustomerAccess } from '../customer-access/customer-access.entity';
+import { Accesses } from '../accesses/accesses.entity';
 
-@Entity({ synchronize: false })
+@Entity({ synchronize: true })
 @Unique(['access_name'])
 export class Access extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -22,6 +22,6 @@ export class Access extends BaseEntity {
   @Column({ nullable: true })
   position: number;
 
-  @OneToMany(() => CustomerAccess, c => c.customer, { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
-  customer_access: CustomerAccess;
+  @OneToMany(() => Accesses, c => c.access, { nullable: true, onDelete: 'CASCADE' })
+  accesses: Accesses;
 }

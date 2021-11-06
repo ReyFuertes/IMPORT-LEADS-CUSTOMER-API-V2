@@ -1,10 +1,10 @@
 import { Repository, EntityRepository } from 'typeorm';
 import * as _ from 'lodash';
-import { CustomerRole } from './customer-role.entity';
-import { ICustomerRoleDto } from './customer-role.dto';
+import { Roles } from './roles.entity';
+import { IRolesDto } from './roles.dto';
 
-@EntityRepository(CustomerRole)
-export class CustomerRoleRepository extends Repository<CustomerRole> {
+@EntityRepository(Roles)
+export class RolesRepository extends Repository<Roles> {
   async getById(id: string): Promise<number[]> {
     const query = this.createQueryBuilder('customer_role');
     let results = await query
@@ -18,12 +18,11 @@ export class CustomerRoleRepository extends Repository<CustomerRole> {
       delete result.customer.salt;
       delete result.customer.username
     });
-    const ret = results.map(r => r.role.level);
-    return ret;
+    return results.map(r => r.role.level);
   }
 
-  async saveCustomerRole(dto: any): Promise<ICustomerRoleDto> {
-    let ret: ICustomerRoleDto;
+  async saveRoles(dto: any): Promise<IRolesDto> {
+    let ret: IRolesDto;
   
     const criteria = { role: { id: dto.role.id }, customer: { id: dto.customer.id } }
 

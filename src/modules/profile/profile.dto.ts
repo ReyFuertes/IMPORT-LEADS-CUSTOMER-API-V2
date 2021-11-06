@@ -1,6 +1,6 @@
 import { ICustomerDto } from "src/modules/customer/customer.dto";
 
-export interface ICustomerProfileDto {
+export interface IProfileDto {
   id?: string;
   firstname?: string;
   lastname?: string;

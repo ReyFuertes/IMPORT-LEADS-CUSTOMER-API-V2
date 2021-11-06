@@ -1,6 +1,6 @@
 import { IsOptional, IsNotEmpty } from 'class-validator';
 
-export enum CustomerRoleType {
+export enum RolesType {
   sp = 'sp',
   client = 'client',
   manager = 'manager',

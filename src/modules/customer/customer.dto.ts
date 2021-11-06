@@ -1,7 +1,8 @@
-import { ICustomerProfileDto } from "src/modules/customer-profile/customer-profile.dto";
-import { CustomerRoleType, GetDto } from "src/models/generic.model";
-import { ICustomerAccessDto } from "src/modules/customer-access/customer-access.dto";
-import { ICustomerRoleDto } from "src/modules/customer-role/customer-role.dto";
+import { IProfileDto } from "src/modules/profile/profile.dto";
+import { RolesType, GetDto } from "src/models/generic.model";
+import { IAccessesDto } from "src/modules/accesses/accesses.dto";
+import { IRolesDto } from "src/modules/roles/roles.dto";
+import { ICustomerUserDto } from "../customer-user/customer-user.dto";
 
 export enum CustomerStatusType {
   Pending = 0,
@@ -13,9 +14,11 @@ export interface ICustomerDto {
   username?: string;
   password?: string;
   salt?: string;
+  image?: string;
   status?: CustomerStatusType;
-  customer_profile?: ICustomerProfileDto;
-  customer_access?: ICustomerAccessDto[];
-  customer_role?: ICustomerRoleDto[];
+  customer_profile?: IProfileDto;
+  customer_access?: IAccessesDto[];
+  customer_role?: IRolesDto[];
+  users?: ICustomerUserDto[];
 }
 export class GetCustomerDto extends GetDto { }

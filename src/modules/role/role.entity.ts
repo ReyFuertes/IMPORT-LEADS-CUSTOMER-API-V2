@@ -1,7 +1,7 @@
 import { BaseEntity, PrimaryGeneratedColumn, Generated, Column, Entity, Unique, OneToMany } from "typeorm";
-import { CustomerRole } from '../customer-role/customer-role.entity';
+import { Roles } from '../roles/roles.entity';
 
-@Entity({ synchronize: false })
+@Entity({ synchronize: true })
 export class Role extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')
@@ -13,6 +13,6 @@ export class Role extends BaseEntity {
   @Column({ nullable: true })
   level: number;
 
-  @OneToMany(() => CustomerRole, c => c.customer, { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
-  customer_role: CustomerRole;
+  @OneToMany(() => Roles, c => c.role, { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
+  roles: Roles;
 }

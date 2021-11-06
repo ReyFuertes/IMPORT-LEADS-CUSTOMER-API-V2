@@ -1,13 +1,13 @@
 import { Repository, EntityRepository } from 'typeorm';
 import * as _ from 'lodash';
-import { CustomerProfile } from './customer-profile.entity';
+import { Profile } from './profile.entity';
 import { NotFoundException } from '@nestjs/common';
-import { ICustomerProfileDto } from './customer-profile.dto';
+import { IProfileDto } from './profile.dto';
 
-@EntityRepository(CustomerProfile)
-export class CustomerProfileRepository extends Repository<CustomerProfile> {
+@EntityRepository(Profile)
+export class ProfileRepository extends Repository<Profile> {
 
-  async updateProfile(dto: ICustomerProfileDto): Promise<ICustomerProfileDto> {
+  async updateProfile(dto: IProfileDto): Promise<IProfileDto> {
     const exist = await this.findOne({ id: dto.id });
 
     if (exist) {
@@ -16,7 +16,7 @@ export class CustomerProfileRepository extends Repository<CustomerProfile> {
     return exist;
   }
 
-  async getByCustomerId(id: string): Promise<CustomerProfile> {
+  async getByCustomerId(id: string): Promise<Profile> {
     const query = this.createQueryBuilder('customer_profile');
     const result = await query
       .innerJoinAndSelect('customer_profile.customer', 'customer')

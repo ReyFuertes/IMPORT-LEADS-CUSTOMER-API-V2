@@ -19,7 +19,7 @@ export class CustomerService extends BaseService<Customer> {
     return this.repo.updateCustomer(dto);
   }
 
-  async createCustomer(dto: any): Promise<any> {
+  async createCustomer(dto: any): Promise<ICustomerDto> {
     return this.repo.createCustomer(dto);
   }
 }

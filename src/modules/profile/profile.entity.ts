@@ -1,8 +1,9 @@
-import { BaseEntity, PrimaryGeneratedColumn, Generated, ManyToOne, OneToOne, Column, Entity, CreateDateColumn } from "typeorm";
+import { BaseEntity, PrimaryGeneratedColumn, Generated, ManyToOne, OneToOne, Column, Entity, CreateDateColumn, JoinColumn } from "typeorm";
 import { Customer } from "src/modules/customer/customer.entity";
+import { CustomerUser } from "../customer-user/customer-user.entity";
 
-@Entity({ synchronize: false })
-export class CustomerProfile extends BaseEntity {
+@Entity({ synchronize: true })
+export class Profile extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')
   id: string;
@@ -56,5 +57,10 @@ export class CustomerProfile extends BaseEntity {
   created_at: string;
 
   @ManyToOne(() => Customer, c => c.customer_profile, { eager: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'customer_id' })
   customer: Customer;
+
+  @ManyToOne(() => CustomerUser, c => c.customer_user_profile, { eager: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'customer_user_id' })
+  customer_user: CustomerUser;
 }

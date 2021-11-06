@@ -13,7 +13,7 @@ export class CustomerController {
   }
 
   @Post()
-  create(@Body() dto: any, @Req() req: any): Promise<any> {
+  create(@Body() dto: any, @Req() req: any): Promise<ICustomerDto> {
     return this.srv.createCustomer(dto);
   }
 

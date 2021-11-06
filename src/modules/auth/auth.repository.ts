@@ -3,15 +3,15 @@ import * as _ from 'lodash';
 import { AuthCredentialDto } from './auth.dto';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { CustomerProfileRepository } from '../customer-profile/customer-profile.repository';
+import { ProfileRepository } from '../profile/profile.repository';
 import { Customer } from '../customer/customer.entity';
 import { ICustomerDto } from 'src/modules/customer/customer.dto';
-import { CustomerAccessRepository } from 'src/modules/customer-access/customer-access.repository';
-import { CustomerRoleRepository } from 'src/modules/customer-role/customer-role.repository';
-import { CustomerRoleType } from 'src/models/generic.model';
+import { AccessesRepository } from 'src/modules/accesses/accesses.repository';
+import { RolesRepository } from 'src/modules/roles/roles.repository';
+import { RolesType } from 'src/models/generic.model';
 import { IRoleDto } from 'src/modules/role/role.dto';
-import { ICustomerRoleDto } from 'src/modules/customer-role/customer-role.dto';
-import { ICustomerAccessDto } from 'src/modules/customer-access/customer-access.dto';
+import { IRolesDto } from 'src/modules/roles/roles.dto';
+import { IAccessesDto } from 'src/modules/accesses/accesses.dto';
 import { IAccessDto } from '../access/access.dto';
 
 @EntityRepository(Customer)
@@ -31,7 +31,7 @@ export class AuthRepository extends Repository<Customer> {
       let customerAccessPayload = customer_access?.map(access => {
         return { customer: { id: customer?.id }, access }
       });
-      const customer_access_repo = getCustomRepository(CustomerAccessRepository);
+      const customer_access_repo = getCustomRepository(AccessesRepository);
       const customer_access_results = await customer_access_repo.save(customerAccessPayload);
 
       /* customer roles */
@@ -39,11 +39,11 @@ export class AuthRepository extends Repository<Customer> {
         return { customer: { id: customer.id }, role }
       });
 
-      const customer_role_repo = getCustomRepository(CustomerRoleRepository);
+      const customer_role_repo = getCustomRepository(RolesRepository);
       const customer_roles_results = await customer_role_repo.save(customer_role_payload);
 
       /* customer profile */
-      const customer_profile_repo = getCustomRepository(CustomerProfileRepository);
+      const customer_profile_repo = getCustomRepository(ProfileRepository);
       const customer_profile_results = await customer_profile_repo.save({
         ...customer_profile,
         customer: customer_results
@@ -60,17 +60,17 @@ export class AuthRepository extends Repository<Customer> {
 
   async getAllCustomers(curr_customer?: any): Promise<ICustomerDto[]> {
     /* check if the current customer is an admin */
-    const customer_role_repo = getCustomRepository(CustomerRoleRepository);
+    const customer_role_repo = getCustomRepository(RolesRepository);
     const customer_role_results: any = await customer_role_repo.findOne({
       where: { customer: { id: curr_customer?.id } }
     });
-    const isAdmin = [CustomerRoleType.admin, CustomerRoleType.sp].includes(customer_role_results?.role?.role_name);
+    const isAdmin = [RolesType.admin, RolesType.sp].includes(customer_role_results?.role?.role_name);
     if (!isAdmin) {
       throw new BadRequestException('Not Authorized');
     }
 
-    const customerRoles: ICustomerRoleDto[] = await this.getCustomerRoles();
-    const customerAccess: ICustomerAccessDto[] = await this.getCustomerAccess();
+    const customerRoles: IRolesDto[] = await this.getRoless();
+    const customerAccess: IAccessesDto[] = await this.getAccesses();
     
     const query = this.createQueryBuilder('customer');
 
@@ -100,20 +100,20 @@ export class AuthRepository extends Repository<Customer> {
     return response;
   }
 
-  async getCustomerRoles(): Promise<IRoleDto[]> {
-    const repo = getCustomRepository(CustomerRoleRepository);
+  async getRoless(): Promise<IRoleDto[]> {
+    const repo = getCustomRepository(RolesRepository);
     const query = repo.createQueryBuilder('customer_role');
-    const results: ICustomerRoleDto[] = await query
+    const results: IRolesDto[] = await query
       .leftJoinAndSelect('customer_role.role', 'role.customer_role')
       .getMany();
 
     return results;
   }
 
-  async getCustomerAccess(): Promise<IAccessDto[]> {
-    const repo = getCustomRepository(CustomerAccessRepository);
+  async getAccesses(): Promise<IAccessDto[]> {
+    const repo = getCustomRepository(AccessesRepository);
     const query = repo.createQueryBuilder('customer_access');
-    const results: ICustomerAccessDto[] = await query
+    const results: IAccessesDto[] = await query
       .leftJoinAndSelect('customer_access.access', 'access.customer_access')
       .getMany();
 

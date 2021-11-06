@@ -6,7 +6,7 @@ import { Roles } from '../roles/roles.entity';
 
 @Entity({ synchronize: true })
 @Unique(['username'])
-export class Customer extends BaseEntity {
+export class CustomerUser extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')
   id: string;
@@ -26,15 +26,15 @@ export class Customer extends BaseEntity {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: string;
 
-  @OneToOne(() => Profile, c => c.customer,
+  @OneToOne(() => Profile, c => c.customer_user,
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
-  customer_profile: Profile;
+  customer_user_profile: Profile;
 
-  // @OneToMany(() => Accesses, c => c.customer,
-  //   { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
-  // accesses: Accesses[];
+  @OneToMany(() => Accesses, c => c.customer_user,
+    { nullable: true, onDelete: 'CASCADE' })
+  accesses: Accesses;
 
-  @OneToMany(() => Roles, c => c.customer,
+  @OneToMany(() => Roles, c => c.customer_user,
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   roles: Roles[];
 
