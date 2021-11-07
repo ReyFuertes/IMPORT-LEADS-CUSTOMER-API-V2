@@ -8,7 +8,7 @@ import { IRolesDto } from '../roles/roles.dto';
 import { ProfileRepository } from '../profile/profile.repository';
 import * as bcrypt from 'bcrypt';
 import { Customer } from './customer.entity';
-import { CustomerStatusType, ICustomerDto } from './customer.dto';
+import { CustomerStatusType, ICustomerDto, ICustomerResponse } from './customer.dto';
 import { BadRequestException } from '@nestjs/common';
 import { RolesType } from 'src/models/generic.model';
 import { IProfileDto } from '../profile/profile.dto';
@@ -23,74 +23,128 @@ export class CustomerRepository extends Repository<Customer> {
     return bcrypt.hash(password, salt);
   }
 
-  async createCustomer(dto: any): Promise<ICustomerDto> {
+  async createCustomer(dto: any): Promise<ICustomerResponse> {
     const profile_repo = getCustomRepository(ProfileRepository);
     const customer_user_repo = getCustomRepository(CustomerUserRepository);
     const roles_repo = getCustomRepository(RolesRepository);
     const accesses_repo = getCustomRepository(AccessesRepository);
 
     let new_customer: ICustomerDto;
-    let new_customer_profile: IProfileDto;
-    // try {
-    const { username, password } = dto?.email_password;
-    const customer = new Customer();
-    customer.username = String(username).toLowerCase();
-    customer.salt = await bcrypt.genSalt();
-    customer.password = await this.hashPassword(password, customer.salt);
-    customer.status = CustomerStatusType.Pending;
-    new_customer = await this.save(customer);
+    try {
+      const { username, password } = dto?.email_password;
+      const customer = new Customer();
+      customer.username = String(username).toLowerCase();
+      customer.salt = await bcrypt.genSalt();
+      customer.password = await this.hashPassword(password, customer.salt);
+      customer.status = CustomerStatusType.Pending;
+      new_customer = await this.save(customer);
 
-    const { address, company_address, company_name, firstname, lastname, phone_number, language } = dto?.customer_information;
-    await profile_repo.save({
-      address,
-      company_address,
-      company_name,
-      firstname,
-      lastname,
-      phone_number,
-      email: new_customer?.username,
-      customer: new_customer,
-      language
-    });
-
-    await Promise.all([dto?.users?.forEach(async (customer_user_info: ICustomerUserDto) => {
-      const customer_user = new CustomerUser();
-      customer_user.username = String(customer_user_info?.username).toLowerCase();
-      customer_user.salt = await bcrypt.genSalt();
-      customer_user.password = await this.hashPassword(customer_user_info?.password, customer_user.salt);
-      const new_customer_user = await customer_user_repo.save(customer_user);
-      /* profile */
+      const { address, company_address, company_name, firstname, lastname, phone_number, language } = dto?.customer_information;
       await profile_repo.save({
-        email: customer_user_info?.username,
-        language,
-        customer_user: new_customer_user,
+        address,
+        company_address,
+        company_name,
+        firstname,
+        lastname,
+        phone_number,
+        email: new_customer?.username,
+        customer: new_customer,
+        language
       });
-      /* access */
-      const access = customer_user_info?.access?.map(access => {
-        return { customer_user: new_customer_user, access }
-      });
-      await accesses_repo.save(access);
-      /* roles */
-      const roles = customer_user_info?.roles?.map(role => {
-        return { customer_user: new_customer_user, role }
-      });
-      await roles_repo.save(roles);
-    })]);
 
-    // } catch (error) {
-    //   throw new BadRequestException(`Customer failed: ${error}`);
-    // }
-    return {
+      await Promise.all([dto?.users?.forEach(async (customer_user_info: ICustomerUserDto) => {
+        const customer_user = new CustomerUser();
+        customer_user.username = String(customer_user_info?.username).toLowerCase();
+        customer_user.salt = await bcrypt.genSalt();
+        customer_user.password = await this.hashPassword(customer_user_info?.password, customer_user.salt);
+        const new_customer_user = await customer_user_repo.save({
+          ...customer_user,
+          customer: new_customer
+        });
+        /* profile */
+        await profile_repo.save({
+          email: customer_user_info?.username,
+          language,
+          customer_user: new_customer_user,
+        });
+        /* access */
+        const access = customer_user_info?.access?.map(access => {
+          return { customer_user: new_customer_user, access }
+        });
+        await accesses_repo.save(access);
+        /* roles */
+        const roles = customer_user_info?.roles?.map(role => {
+          return { customer_user: new_customer_user, role }
+        });
+        await roles_repo.save(roles);
+      })]);
 
-    };
+    } catch (error) {
+      throw new BadRequestException(`Customer failed: ${error}`);
+    }
+    return this.getCustomerById(new_customer?.id);
   }
 
-  async getCustomers(dto?: any): Promise<ICustomerDto[]> {
+  async getCustomerById(id: string): Promise<ICustomerResponse> {
+    const query = this.createQueryBuilder('customer');
+    let result: ICustomerDto = await query
+      .select(['id', 'username', 'status', 'created_at'])
+      .where("id = :id", { id: id })
+      .orderBy('customer.created_at', 'DESC')
+      .getRawOne();
+
+    const profile_repo = getCustomRepository(ProfileRepository);
+
+    const profile_query = profile_repo.createQueryBuilder('profile');
+    const profile: IProfileDto = await profile_query
+      .select(['firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address'])
+      .where("customer_id = :customer_id", { customer_id: result?.id })
+      .getRawOne();
+
+    const customer_user_repo = getCustomRepository(CustomerUserRepository);
+    const customer_user_query = customer_user_repo.createQueryBuilder('customer_user');
+    const customer_user: IProfileDto[] = await customer_user_query
+      .select(['id', 'username', 'status'])
+      .where("customer_id = :customer_id", { customer_id: result?.id })
+      .getRawMany();
+
+    return {
+      ...result,
+      profile,
+      customer_user
+    }
+  }
+
+  async getCustomers(dto?: any): Promise<any[]> {
     const query = this.createQueryBuilder('customer');
     let results: ICustomerDto[] = await query
+      .select(['id', 'username', 'status', 'created_at'])
       .orderBy('customer.created_at', 'DESC')
-      .getMany();
-    return results;
+      .getRawMany();
+
+    const profile_repo = getCustomRepository(ProfileRepository);
+
+    const response = await Promise.all(results.map(async (customer) => {
+      const profile_query = profile_repo.createQueryBuilder('profile');
+      const profile: IProfileDto[] = await profile_query
+        .select(['firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address'])
+        .where("customer_id = :customer_id", { customer_id: customer?.id })
+        .getRawOne();
+
+      const customer_user_repo = getCustomRepository(CustomerUserRepository);
+      const customer_user_query = customer_user_repo.createQueryBuilder('customer_user');
+      const customer_user: IProfileDto[] = await customer_user_query
+        .select(['id', 'username', 'status'])
+        .where("customer_id = :customer_id", { customer_id: customer?.id })
+        .getRawMany();
+
+      return {
+        ...customer,
+        profile,
+        customer_user
+      }
+    }));
+    return response;
   }
 
 

@@ -9,6 +9,9 @@ export interface ICustomerUserDto {
   password?: string;
   salt?: string;
   access?: IAccessDto[];
-  roles?: IRolesDto[]
+  roles?: IRolesDto[];
+  customer: ICustomerDto;
+  created_at?: string;
+  status?: string;
 }
 export class GetCustomerDto extends GetDto { }

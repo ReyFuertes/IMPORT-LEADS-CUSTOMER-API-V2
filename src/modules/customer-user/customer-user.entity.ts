@@ -3,6 +3,7 @@ import * as bcrypt from 'bcrypt'
 import { Profile } from '../profile/profile.entity';
 import { Accesses } from '../accesses/accesses.entity';
 import { Roles } from '../roles/roles.entity';
+import { Customer } from "../customer/customer.entity";
 
 @Entity({ synchronize: true })
 @Unique(['username'])
@@ -25,6 +26,11 @@ export class CustomerUser extends BaseEntity {
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: string;
+
+  @ManyToOne(() => Customer, c => c.customer_user,
+    { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'customer_id' })
+  customer: Customer;
 
   @OneToOne(() => Profile, c => c.customer_user,
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })

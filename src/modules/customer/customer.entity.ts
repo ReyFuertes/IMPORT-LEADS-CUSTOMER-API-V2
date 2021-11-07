@@ -3,6 +3,7 @@ import * as bcrypt from 'bcrypt'
 import { Profile } from '../profile/profile.entity';
 import { Accesses } from '../accesses/accesses.entity';
 import { Roles } from '../roles/roles.entity';
+import { CustomerUser } from "../customer-user/customer-user.entity";
 
 @Entity({ synchronize: true })
 @Unique(['username'])
@@ -30,9 +31,8 @@ export class Customer extends BaseEntity {
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   customer_profile: Profile;
 
-  // @OneToMany(() => Accesses, c => c.customer,
-  //   { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
-  // accesses: Accesses[];
+  @OneToMany(() => CustomerUser, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
+  customer_user: CustomerUser;
 
   @OneToMany(() => Roles, c => c.customer,
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })

@@ -9,6 +9,14 @@ export enum CustomerStatusType {
   Approved = 1,
   Cancelled = 2
 }
+export interface ICustomerResponse {
+  created_at?: string;
+  customer_user: ICustomerDto[];
+  id?: string;
+  profile?: IProfileDto;
+  status?: number;
+  username?: string;
+}
 export interface ICustomerDto {
   id?: string;
   username?: string;
