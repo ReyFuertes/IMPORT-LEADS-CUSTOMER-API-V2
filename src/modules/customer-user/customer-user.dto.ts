@@ -1,4 +1,4 @@
-import { RolesType, GetDto } from "src/models/generic.model";
+import { RolesType, GetDto, ISimpleItem } from "src/models/generic.model";
 import { IAccessDto } from "../access/access.dto";
 import { ICustomerDto } from "../customer/customer.dto";
 import { IRolesDto } from "../roles/roles.dto";
@@ -8,9 +8,9 @@ export interface ICustomerUserDto {
   username?: string;
   password?: string;
   salt?: string;
-  access?: IAccessDto[];
-  roles?: IRolesDto[];
-  customer: ICustomerDto;
+  access?: IAccessDto[] | string[];
+  roles?: IRolesDto[] | string[];
+  customer?: ICustomerDto;
   created_at?: string;
   status?: string;
 }

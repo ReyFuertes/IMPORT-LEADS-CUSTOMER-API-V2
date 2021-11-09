@@ -1,5 +1,9 @@
 import { IsOptional, IsNotEmpty } from 'class-validator';
 
+export interface ISimpleItem {
+  label: string;
+  value: string;
+}
 export enum RolesType {
   sp = 'sp',
   client = 'client',

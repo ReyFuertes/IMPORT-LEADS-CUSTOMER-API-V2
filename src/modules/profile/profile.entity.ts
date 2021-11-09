@@ -2,7 +2,7 @@ import { BaseEntity, PrimaryGeneratedColumn, Generated, ManyToOne, OneToOne, Col
 import { Customer } from "src/modules/customer/customer.entity";
 import { CustomerUser } from "../customer-user/customer-user.entity";
 
-@Entity({ synchronize: true })
+@Entity({ synchronize: false })
 export class Profile extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')
@@ -19,6 +19,9 @@ export class Profile extends BaseEntity {
 
   @Column({ nullable: true })
   phone_number: string;
+
+  @Column({ nullable: true })
+  address: string;
 
   @Column({ nullable: true })
   email: string;

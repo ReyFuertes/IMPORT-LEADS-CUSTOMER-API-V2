@@ -11,11 +11,29 @@ export enum CustomerStatusType {
 }
 export interface ICustomerResponse {
   created_at?: string;
-  customer_user: ICustomerDto[];
+  customer_users: ICustomerUserDto[];
   id?: string;
-  profile?: IProfileDto;
+  customer_profile?: IProfileDto;
   status?: number;
   username?: string;
+}
+export interface ICustomerPayload {
+  id?: string;
+  email_password: {
+    username?: string;
+    password?: string;
+  },
+  customer_profile: {
+    id?: string;
+    firstname?: string;
+    lastname?: string;
+    phone_number?: string;
+    address?: string;
+    company_name?: string;
+    company_address?: string;
+    language?: string;
+  },
+  users: any[];
 }
 export interface ICustomerDto {
   id?: string;
