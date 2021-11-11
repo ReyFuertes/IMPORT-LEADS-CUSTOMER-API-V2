@@ -3,7 +3,7 @@ import { Customer } from '../customer/customer.entity';
 import { Access } from '../access/access.entity';
 import { CustomerUser } from "../customer-user/customer-user.entity";
 
-@Entity({ synchronize: false })
+@Entity({synchronize: false })
 export class Accesses extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')

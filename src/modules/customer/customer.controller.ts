@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Param, Delete, Patch, Query, SetMetadata, UseGuards, Req } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ICustomerDto, ICustomerPayload, ICustomerResponse } from './customer.dto';
+import { ICustomerDto, ICustomerPayload, ICustomerResponseDto } from './customer.dto';
 import { CustomerService } from './customer.service';
 
 @Controller('customer')
@@ -18,7 +18,7 @@ export class CustomerController {
   }
 
   @Post()
-  create(@Body() dto: any, @Req() req: any): Promise<ICustomerResponse> {
+  create(@Body() dto: any, @Req() req: any): Promise<ICustomerResponseDto> {
     return this.srv.createCustomer(dto);
   }
 

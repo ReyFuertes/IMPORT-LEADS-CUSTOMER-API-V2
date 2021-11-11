@@ -9,7 +9,7 @@ export enum CustomerStatusType {
   Approved = 1,
   Cancelled = 2
 }
-export interface ICustomerResponse {
+export interface ICustomerResponseDto {
   created_at?: string;
   customer_users: ICustomerUserDto[];
   id?: string;

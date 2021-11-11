@@ -9,77 +9,64 @@ import { Customer } from '../customer/customer.entity';
 import { Profile } from '../profile/profile.entity';
 import { ProfileRepository } from '../profile/profile.repository';
 import { Response } from 'express';
+import { ICustomerUserDto, ICustomerUserResponseDto } from './customer-user.dto';
+import { IProfileDto } from '../profile/profile.dto';
 
 @EntityRepository(CustomerUser)
 export class CustomerUserRepository extends Repository<CustomerUser> {
 
-  // async createCustomerUser(dto: any): Promise<any> {
-  //   console.log(dto)
-  //   const customer_profile_repo = getCustomRepository(ProfileRepository);
-  //   const customer_access_repo = getCustomRepository(AccessesRepository);
-  //   const customer_roles_repo = getCustomRepository(RolesRepository);
-  //   let new_customer_result: Customer;
+  async deleteById(id: string): Promise<ICustomerUserDto> {
+    const exist = await this.findOne({ id });
+    if (exist) {
+      this.createQueryBuilder()
+        .delete()
+        .from(CustomerUser)
+        .where("id = :id", { id })
+        .execute();
+      return exist;
+    }
+    return null;
+  }
 
-  //   try {
-  //     const { username, password } = dto?.email_password;
-  //     if (username && password) {
-  //       const customer = new Customer();
-  //       customer.username = String(username).toLowerCase();
-  //       customer.salt = await bcrypt.genSalt();
-  //       customer.password = await this.hashPassword(password, customer.salt);
+  async getCustomerUserById(id: string): Promise<ICustomerUserResponseDto> {
+    const query = this.createQueryBuilder('customer_user');
+    let customer_user: ICustomerUserDto = await query
+      .select(['id', 'username', 'status', 'created_at'])
+      .where("id = :id", { id: id })
+      .orderBy('created_at', 'DESC')
+      .getRawOne();
 
-  //       new_customer_result = await this.save(customer);
-  //     } else {
-  //       throw new BadRequestException('New customer failed');
-  //     }
+    const profile_repo = getCustomRepository(ProfileRepository);
 
-  //     if (dto?.customer_information) {
-  //       const { firstname, lastname, phone_number, address, company_name, company_address, language } = dto?.customer_information;
-  //       await customer_profile_repo.save({
-  //         firstname,
-  //         lastname,
-  //         phone: phone_number,
-  //         address,
-  //         company_name: company_name,
-  //         company_address: company_address,
-  //         language,
-  //         customer: new_customer_result
-  //       });
-  //     } else {
-  //       throw new BadRequestException('Customer profile failed');
-  //     }
+    const profile_query = profile_repo.createQueryBuilder('profile');
+    const customer_user_profile: IProfileDto = await profile_query
+      .select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address'])
+      .where("customer_id = :customer_id", { customer_id: customer_user?.id })
+      .getRawOne();
 
-  //     //await Promise.all([dto?.forEach(async (customer_user_info) => {
-  //     // const customerUser = new CustomerUser();
-  //     // customerUser.username = String(customer_user_info?.username).toLowerCase();
-  //     // customerUser.salt = await bcrypt.genSalt();
-  //     // customerUser.password = await this.hashPassword(customer_user_info?.password, customerUser.salt);
-  //     // const new_customer_user = await this.save(customerUser);
-
-  //     // await user_profile_repo.save({
-  //     //   firstname: user_info?.firstname,
-  //     //   lastname: user_info?.lastname
-  //     // });
-
-  //     // await Promise.all([customer_user_info?.access?.forEach(async (_access) => {
-  //     //   await customer_access_repo.save({
-  //     //     user: new_customer_user,
-  //     //     access: _access
-  //     //   });
-  //     // })]);
-
-  //     // await Promise.all([customer_user_info?.roles?.forEach(async (_roles) => {
-  //     //   await customer_roles_repo.save({
-  //     //     user: new_customer_user,
-  //     //     access: _roles
-  //     //   });
-  //     // })]);
-  //     //})]);
-  //   } catch (error) {
-  //     throw new BadRequestException(`Onboarding failed, ${error}`);
-  //   }
-  //   return new_customer_result;
-  // }
+    const roles_repo = getCustomRepository(RolesRepository);
+    const accesses_repo = getCustomRepository(AccessesRepository);
+    const roles_result = await roles_repo.find({
+      where: { customer_user: { id: customer_user?.id } },
+      relations: ['role']
+    });
+    const accesses_result = await accesses_repo.find({
+      where: { customer_user: { id: customer_user?.id } },
+      relations: ['access']
+    });
+    const accesses = accesses_result.map(value => {
+      return value?.access.id
+    });
+    const roles = roles_result?.map(value => {
+      return value?.role?.id
+    });
+    return {
+      ...customer_user,
+      customer_user_profile,
+      accesses,
+      roles
+    }
+  }
 
   async hashPassword(password: string, salt: string) {
     return bcrypt.hash(password, salt);

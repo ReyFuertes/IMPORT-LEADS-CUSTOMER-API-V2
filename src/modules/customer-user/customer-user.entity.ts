@@ -5,7 +5,7 @@ import { Accesses } from '../accesses/accesses.entity';
 import { Roles } from '../roles/roles.entity';
 import { Customer } from "../customer/customer.entity";
 
-@Entity({ synchronize: false })
+@Entity({synchronize: false })
 @Unique(['username'])
 export class CustomerUser extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -21,7 +21,7 @@ export class CustomerUser extends BaseEntity {
   @Column({ nullable: true })
   salt: string;
 
-  @Column({ nullable: false, default: 0 })
+  @Column({ nullable: true, default: 0 })
   status: number;
 
   @CreateDateColumn({ type: 'timestamptz' })
@@ -38,7 +38,7 @@ export class CustomerUser extends BaseEntity {
 
   @OneToMany(() => Accesses, c => c.customer_user,
     { nullable: true, onDelete: 'CASCADE' })
-  accesses: Accesses;
+  accesses: Accesses[];
 
   @OneToMany(() => Roles, c => c.customer_user,
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })

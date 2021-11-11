@@ -3,7 +3,7 @@ import { Customer } from "src/modules/customer/customer.entity";
 import { Role } from "src/modules/role/role.entity";
 import { CustomerUser } from "../customer-user/customer-user.entity";
 
-@Entity({ synchronize: false })
+@Entity({synchronize: false })
 export class Roles extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')

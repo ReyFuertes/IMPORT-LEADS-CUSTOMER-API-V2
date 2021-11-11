@@ -28,7 +28,7 @@ export const typeOrmConfig: TypeOrmModuleOptions = {
 //   password: 'p@55w0rd',
 //   database: 'cil-china',
 //   entities: [__dirname + 'dist/../**/*.entity.{js,ts}'],
-//   synchronize: false,
+//  synchronize: false,
 //   logging: false,
 //   namingStrategy: new SnakeNamingStrategy(),
 //   maxQueryExecutionTime: 300000,

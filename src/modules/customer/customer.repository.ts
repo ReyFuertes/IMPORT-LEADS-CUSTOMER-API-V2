@@ -5,7 +5,7 @@ import { RolesRepository } from '../roles/roles.repository';
 import { ProfileRepository } from '../profile/profile.repository';
 import * as bcrypt from 'bcrypt';
 import { Customer } from './customer.entity';
-import { CustomerStatusType, ICustomerDto, ICustomerPayload, ICustomerResponse } from './customer.dto';
+import { CustomerStatusType, ICustomerDto, ICustomerPayload, ICustomerResponseDto } from './customer.dto';
 import { BadRequestException } from '@nestjs/common';
 import { IProfileDto } from '../profile/profile.dto';
 import { CustomerUser } from '../customer-user/customer-user.entity';
@@ -19,7 +19,7 @@ export class CustomerRepository extends Repository<Customer> {
     return bcrypt.hash(password, salt);
   }
 
-  async createCustomer(dto: any): Promise<ICustomerResponse> {
+  async createCustomer(dto: any): Promise<ICustomerResponseDto> {
     const profile_repo = getCustomRepository(ProfileRepository);
     const customer_user_repo = getCustomRepository(CustomerUserRepository);
     const roles_repo = getCustomRepository(RolesRepository);
@@ -64,7 +64,7 @@ export class CustomerRepository extends Repository<Customer> {
           customer_user: new_customer_user,
         });
         /* access */
-        const access = customer_user_info?.access?.map(access => {
+        const access = customer_user_info?.accesses?.map(access => {
           return { customer_user: new_customer_user, access }
         });
         await accesses_repo.save(access);
@@ -81,7 +81,7 @@ export class CustomerRepository extends Repository<Customer> {
     return await this.getCustomerById(new_customer?.id);
   }
 
-  async getCustomerById(id: string): Promise<ICustomerResponse> {
+  async getCustomerById(id: string): Promise<ICustomerResponseDto> {
     const query = this.createQueryBuilder('customer');
     let result: ICustomerDto = await query
       .select(['id', 'username', 'status', 'created_at'])
@@ -153,7 +153,7 @@ export class CustomerRepository extends Repository<Customer> {
 
       const customer_user_repo = getCustomRepository(CustomerUserRepository);
       const customer_user_query = customer_user_repo.createQueryBuilder('customer_user');
-      const customer_user: IProfileDto[] = await customer_user_query
+      const customer_users: ICustomerUserDto[] = await customer_user_query
         .select(['id', 'username', 'status'])
         .where("customer_id = :customer_id", { customer_id: customer?.id })
         .getRawMany();
@@ -161,12 +161,11 @@ export class CustomerRepository extends Repository<Customer> {
       return {
         ...customer,
         customer_profile,
-        customer_user
+        customer_users
       }
     }));
     return response;
   }
-
 
   async updateCustomer(dto: ICustomerPayload): Promise<ICustomerDto> {
     const profile_repo = getCustomRepository(ProfileRepository);
@@ -208,9 +207,7 @@ export class CustomerRepository extends Repository<Customer> {
             customer_user.id = customer_user_info?.id;
           }
           customer_user.username = String(customer_user_info?.username).toLowerCase();
-          customer_user.salt = await bcrypt.genSalt();
-          customer_user.password = await this.hashPassword(customer_user_info?.password, customer_user.salt);
-
+          console.log('customer_user', customer_user, customer_user_info.password)
           const updated_customer_user = await customer_user_repo.save({
             ...customer_user,
             customer: { id: customer_to_update?.id }
@@ -227,18 +224,32 @@ export class CustomerRepository extends Repository<Customer> {
           await profile_repo.save(updated_customer_profile);
 
           /* access */
-          await accesses_repo.delete({ customer_user: updated_customer_user });
-          const access = customer_user_info?.access?.map(access => {
+          const accesses_exist = await accesses_repo.find({
+            where: { customer_user: updated_customer_user }
+          });
+          if(accesses_exist?.length > 0) {
+            await accesses_repo.delete({ customer_user: updated_customer_user });
+          }
+          const access = customer_user_info?.accesses?.map(access => {
             return { customer_user: updated_customer_user, access }
           });
-          await accesses_repo.save(access);
+          if(access) {
+            await accesses_repo.save(access);
+          }
 
           /* roles */
-          await roles_repo.delete({ customer_user: updated_customer_user });
+          const roles_exist = await roles_repo.find({
+            where: { customer_user: updated_customer_user }
+          });
+          if(roles_exist?.length > 0) {
+            await roles_repo.delete({ customer_user: updated_customer_user });
+          }
           const roles = customer_user_info?.roles?.map(role => {
             return { customer_user: updated_customer_user, role }
           });
-          await roles_repo.save(roles);
+          if(roles) {
+            await roles_repo.save(roles);
+          }
         })]);
       } catch (error) {
         throw new BadRequestException(`Customer user update failed: ${error}`);
