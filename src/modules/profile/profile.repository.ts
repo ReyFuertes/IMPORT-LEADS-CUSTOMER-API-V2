@@ -17,9 +17,9 @@ export class ProfileRepository extends Repository<Profile> {
   }
 
   async getByCustomerId(id: string): Promise<Profile> {
-    const query = this.createQueryBuilder('customer_profile');
+    const query = this.createQueryBuilder('profile');
     const result = await query
-      .innerJoinAndSelect('customer_profile.customer', 'customer')
+      .innerJoinAndSelect('profile.customer', 'customer')
       .where("customer_id = :id", { id })
       .getOne();
 

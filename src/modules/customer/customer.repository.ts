@@ -15,6 +15,19 @@ import { CustomerUserRepository } from '../customer-user/customer-user.repositor
 @EntityRepository(Customer)
 export class CustomerRepository extends Repository<Customer> {
 
+  async deleteById(id: string): Promise<ICustomerDto> {
+    const exist = await this.findOne({ id });
+    if (exist) {
+      this.createQueryBuilder()
+        .delete()
+        .from(CustomerUser)
+        .where("id = :id", { id })
+        .execute();
+      return exist;
+    }
+    return null;
+  }
+
   async hashPassword(password: string, salt: string) {
     return bcrypt.hash(password, salt);
   }
@@ -35,7 +48,7 @@ export class CustomerRepository extends Repository<Customer> {
       customer.status = CustomerStatusType.Pending;
       new_customer = await this.save(customer);
 
-      const { address, company_address, company_name, firstname, lastname, phone_number, language } = dto?.customer_profile;
+      const { address, company_address, company_name, firstname, lastname, phone_number, language } = dto?.profile;
       await profile_repo.save({
         address,
         company_address,
@@ -92,7 +105,7 @@ export class CustomerRepository extends Repository<Customer> {
     const profile_repo = getCustomRepository(ProfileRepository);
 
     const profile_query = profile_repo.createQueryBuilder('profile');
-    const customer_profile: IProfileDto = await profile_query
+    const profile: IProfileDto = await profile_query
       .select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address'])
       .where("customer_id = :customer_id", { customer_id: result?.id })
       .getRawOne();
@@ -130,7 +143,7 @@ export class CustomerRepository extends Repository<Customer> {
 
     return {
       ...result,
-      customer_profile,
+      profile,
       customer_users
     }
   }
@@ -146,7 +159,7 @@ export class CustomerRepository extends Repository<Customer> {
 
     const response = await Promise.all(results.map(async (customer) => {
       const profile_query = profile_repo.createQueryBuilder('profile');
-      const customer_profile: IProfileDto[] = await profile_query
+      const profile: IProfileDto[] = await profile_query
         .select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address'])
         .where("customer_id = :customer_id", { customer_id: customer?.id })
         .getRawOne();
@@ -160,7 +173,7 @@ export class CustomerRepository extends Repository<Customer> {
 
       return {
         ...customer,
-        customer_profile,
+        profile,
         customer_users
       }
     }));
@@ -186,7 +199,7 @@ export class CustomerRepository extends Repository<Customer> {
       customer.status = CustomerStatusType.Pending;
       customer_to_update = await this.save(customer);
 
-      const { id, address, company_address, company_name, firstname, lastname, phone_number, language } = dto?.customer_profile;
+      const { id, address, company_address, company_name, firstname, lastname, phone_number, language } = dto?.profile;
       await profile_repo.save({
         id,
         address,
@@ -207,7 +220,6 @@ export class CustomerRepository extends Repository<Customer> {
             customer_user.id = customer_user_info?.id;
           }
           customer_user.username = String(customer_user_info?.username).toLowerCase();
-          console.log('customer_user', customer_user, customer_user_info.password)
           const updated_customer_user = await customer_user_repo.save({
             ...customer_user,
             customer: { id: customer_to_update?.id }
@@ -215,13 +227,13 @@ export class CustomerRepository extends Repository<Customer> {
 
           /* profile */
           const customer_user_profile = await profile_repo.findOne({ customer_user: { id: updated_customer_user?.id } });
-          const updated_customer_profile = {
+          const updated_profile = {
             ...customer_user_profile,
             email: customer_user_info?.username,
             language,
             customer_user: updated_customer_user,
           }
-          await profile_repo.save(updated_customer_profile);
+          await profile_repo.save(updated_profile);
 
           /* access */
           const accesses_exist = await accesses_repo.find({

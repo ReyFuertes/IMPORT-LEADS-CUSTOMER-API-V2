@@ -6,5 +6,5 @@ export const logToConsole = (str: string, customer: ICustomerDto) => {
 }
 
 const getFullname = (customer: ICustomerDto): string => {
-  return `${customer?.customer_profile?.firstname} ${customer?.customer_profile?.lastname}`;
+  return `${customer?.profile?.firstname} ${customer?.profile?.lastname}`;
 }

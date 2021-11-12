@@ -17,7 +17,7 @@ import { IAccessDto } from '../access/access.dto';
 @EntityRepository(Customer)
 export class AuthRepository extends Repository<Customer> {
   async signUp(dto: any, curr_customer: any): Promise<any[]> {
-    const { username, password, customer_access, customer_role, customer_profile } = dto;
+    const { username, password, customer_access, customer_role, profile } = dto;
 
     const customer = new Customer();
     customer.username = String(username).toLowerCase();
@@ -43,13 +43,13 @@ export class AuthRepository extends Repository<Customer> {
       const customer_roles_results = await customer_role_repo.save(customer_role_payload);
 
       /* customer profile */
-      const customer_profile_repo = getCustomRepository(ProfileRepository);
-      const customer_profile_results = await customer_profile_repo.save({
-        ...customer_profile,
+      const profile_repo = getCustomRepository(ProfileRepository);
+      const profile_results = await profile_repo.save({
+        ...profile,
         customer: customer_results
       });
 
-      await Promise.all([customer_access_results, customer_roles_results, customer_profile_results]);
+      await Promise.all([customer_access_results, customer_roles_results, profile_results]);
 
       return await this.getAllCustomers(curr_customer);
 
@@ -75,7 +75,7 @@ export class AuthRepository extends Repository<Customer> {
     const query = this.createQueryBuilder('customer');
 
     let customers: ICustomerDto[] = await query
-      .innerJoinAndSelect('customer.customer_profile', 'customer_profile.customer')
+      .innerJoinAndSelect('customer.profile', 'profile.customer')
       .leftJoinAndSelect('customer.customer_access', 'customer_access.customer')
       .leftJoinAndSelect('customer.customer_role', 'customer_role.customer')
       .orderBy('customer.created_at', 'DESC')
@@ -123,7 +123,7 @@ export class AuthRepository extends Repository<Customer> {
   async validatePassword(authCredsDto: AuthCredentialDto): Promise<Customer> {
     const { username, password } = authCredsDto;
     const customer = await this.findOne({ username: String(username).toLowerCase() },
-      { relations: ['customer_profile'] });
+      { relations: ['profile'] });
 
     if (customer && await customer.validatePassword(password)) {
       return customer;

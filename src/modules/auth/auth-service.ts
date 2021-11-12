@@ -22,7 +22,7 @@ export class AuthService extends BaseService<Customer> {
         const payload = { id: customer.id, username: customer.username };
         const accessToken = await this.jwtSrv.sign(payload);
 
-        return { accessToken, customer: { id: customer?.id, username: customer?.username, image: customer?.customer_profile?.image } };
+        return { accessToken, customer: { id: customer?.id, username: customer?.username, image: customer?.profile?.image } };
       }
     } catch (error) {
       throw new BadRequestException('Invalid credentials!');

@@ -29,7 +29,7 @@ export class Customer extends BaseEntity {
 
   @OneToOne(() => Profile, c => c.customer,
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
-  customer_profile: Profile;
+  profile: Profile;
 
   @OneToMany(() => CustomerUser, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   customer_user: CustomerUser;

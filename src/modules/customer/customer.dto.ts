@@ -13,7 +13,7 @@ export interface ICustomerResponseDto {
   created_at?: string;
   customer_users: ICustomerUserDto[];
   id?: string;
-  customer_profile?: IProfileDto;
+  profile?: IProfileDto;
   status?: number;
   username?: string;
 }
@@ -23,7 +23,7 @@ export interface ICustomerPayload {
     username?: string;
     password?: string;
   },
-  customer_profile: {
+  profile: {
     id?: string;
     firstname?: string;
     lastname?: string;
@@ -42,7 +42,7 @@ export interface ICustomerDto {
   salt?: string;
   image?: string;
   status?: CustomerStatusType;
-  customer_profile?: IProfileDto;
+  profile?: IProfileDto;
   customer_access?: IAccessesDto[];
   customer_role?: IRolesDto[];
   users?: ICustomerUserDto[];

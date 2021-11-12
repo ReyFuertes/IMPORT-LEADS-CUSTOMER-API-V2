@@ -10,6 +10,10 @@ export class CustomerService extends BaseService<Customer> {
   constructor(@InjectRepository(CustomerRepository) public repo: CustomerRepository) {
     super(repo);
   }
+
+  async deleteById(id: string): Promise<ICustomerDto> {
+    return await this.repo.deleteById(id);
+  }
  
   async getCustomerById(id: string): Promise<ICustomerDto> {
     return this.repo.getCustomerById(id);

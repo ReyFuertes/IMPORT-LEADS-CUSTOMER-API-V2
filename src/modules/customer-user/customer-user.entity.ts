@@ -5,7 +5,7 @@ import { Accesses } from '../accesses/accesses.entity';
 import { Roles } from '../roles/roles.entity';
 import { Customer } from "../customer/customer.entity";
 
-@Entity({synchronize: false })
+@Entity({ synchronize: false })
 @Unique(['username'])
 export class CustomerUser extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -34,7 +34,7 @@ export class CustomerUser extends BaseEntity {
 
   @OneToOne(() => Profile, c => c.customer_user,
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
-  customer_user_profile: Profile;
+  profile: Profile;
 
   @OneToMany(() => Accesses, c => c.customer_user,
     { nullable: true, onDelete: 'CASCADE' })

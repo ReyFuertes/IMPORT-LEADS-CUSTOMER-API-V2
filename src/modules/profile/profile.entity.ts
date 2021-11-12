@@ -59,11 +59,11 @@ export class Profile extends BaseEntity {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: string;
 
-  @ManyToOne(() => Customer, c => c.customer_profile, { eager: true, onDelete: 'CASCADE' })
+  @ManyToOne(() => Customer, c => c.profile, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'customer_id' })
   customer: Customer;
 
-  @ManyToOne(() => CustomerUser, c => c.customer_user_profile, { eager: true, onDelete: 'CASCADE' })
+  @ManyToOne(() => CustomerUser, c => c.profile, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'customer_user_id' })
   customer_user: CustomerUser;
 }

@@ -7,6 +7,11 @@ import { CustomerService } from './customer.service';
 export class CustomerController {
   constructor(private srv: CustomerService) { }
 
+  @Delete('/:id')
+  delete(@Param('id') id: string): Promise<ICustomerDto> {
+    return this.srv.deleteById(id);
+  }
+
   @Get('/:id')
   getCustomerById(@Param('id') id: string): Promise<ICustomerDto> {
     return this.srv.getCustomerById(id);
