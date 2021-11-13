@@ -11,6 +11,8 @@ import { IProfileDto } from '../profile/profile.dto';
 import { CustomerUser } from '../customer-user/customer-user.entity';
 import { ICustomerUserDto } from '../customer-user/customer-user.dto';
 import { CustomerUserRepository } from '../customer-user/customer-user.repository';
+import { sqlOp } from 'src/models/generic.model';
+import { Profile } from '../profile/profile.entity';
 
 @EntityRepository(Customer)
 export class CustomerRepository extends Repository<Customer> {
@@ -23,6 +25,8 @@ export class CustomerRepository extends Repository<Customer> {
         .from(CustomerUser)
         .where("id = :id", { id })
         .execute();
+      delete exist?.password;
+      delete exist?.salt;
       return exist;
     }
     return null;
@@ -149,21 +153,43 @@ export class CustomerRepository extends Repository<Customer> {
   }
 
   async getCustomers(dto?: any): Promise<any[]> {
-    const query = this.createQueryBuilder('customer');
-    let results: ICustomerDto[] = await query
-      .select(['id', 'username', 'status', 'created_at'])
-      .orderBy('created_at', 'DESC')
-      .getRawMany();
+    const query = this.createQueryBuilder('customer')
+      .select(['customer.id', 'customer.username', 'customer.status', 'customer.created_at'])
+      .leftJoinAndMapOne(
+        "customer.profile",
+        Profile,
+        "profile",
+        "profile.customer_id = customer.id"
+      ).orderBy('customer.created_at', 'DESC');
 
-    const profile_repo = getCustomRepository(ProfileRepository);
+    const where = dto;
+    const page = Object.assign({}, {
+      take: dto?.take,
+      skip: dto?.skip
+    });
+    delete where?.skip;
+    delete where?.take;
+
+    try {
+      Object.entries(where)?.forEach(c => {
+        const obj = Object.assign({}, Object.entries(c)
+          .reduce((acc, [k, v]) => ({ ...acc, [c[0]]: `%${v}%` }), {})
+        );
+        query.orWhere(`${Object.keys(obj)} ${sqlOp.iLike} :${Object.keys(obj)}`, obj)
+      });
+    } catch (error) {
+      throw new BadRequestException();
+    }
+    if (page?.skip) {
+      query.skip(page?.skip)
+    }
+    if (page?.take) {
+      query.take(page?.take)
+    }
+
+    let results: ICustomerDto[] = await query.getMany();
 
     const response = await Promise.all(results.map(async (customer) => {
-      const profile_query = profile_repo.createQueryBuilder('profile');
-      const profile: IProfileDto[] = await profile_query
-        .select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address'])
-        .where("customer_id = :customer_id", { customer_id: customer?.id })
-        .getRawOne();
-
       const customer_user_repo = getCustomRepository(CustomerUserRepository);
       const customer_user_query = customer_user_repo.createQueryBuilder('customer_user');
       const customer_users: ICustomerUserDto[] = await customer_user_query
@@ -173,7 +199,6 @@ export class CustomerRepository extends Repository<Customer> {
 
       return {
         ...customer,
-        profile,
         customer_users
       }
     }));
@@ -239,13 +264,13 @@ export class CustomerRepository extends Repository<Customer> {
           const accesses_exist = await accesses_repo.find({
             where: { customer_user: updated_customer_user }
           });
-          if(accesses_exist?.length > 0) {
+          if (accesses_exist?.length > 0) {
             await accesses_repo.delete({ customer_user: updated_customer_user });
           }
           const access = customer_user_info?.accesses?.map(access => {
             return { customer_user: updated_customer_user, access }
           });
-          if(access) {
+          if (access) {
             await accesses_repo.save(access);
           }
 
@@ -253,13 +278,13 @@ export class CustomerRepository extends Repository<Customer> {
           const roles_exist = await roles_repo.find({
             where: { customer_user: updated_customer_user }
           });
-          if(roles_exist?.length > 0) {
+          if (roles_exist?.length > 0) {
             await roles_repo.delete({ customer_user: updated_customer_user });
           }
           const roles = customer_user_info?.roles?.map(role => {
             return { customer_user: updated_customer_user, role }
           });
-          if(roles) {
+          if (roles) {
             await roles_repo.save(roles);
           }
         })]);
