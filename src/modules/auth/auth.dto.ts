@@ -1,8 +1,8 @@
 import { IsString, MinLength, MaxLength } from "class-validator";
 
-export interface ICustomerAuthDto {
+export interface IUserAuthDto {
   accessToken: string,
-  customer: {
+  user: {
     id: string,
     username: string,
     image: string

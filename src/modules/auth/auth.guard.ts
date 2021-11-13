@@ -7,11 +7,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     super();
   }
 
-  handleRequest(err, customer, info, context) {
+  handleRequest(err, user, info, context) {
     console.log('handleRequest', err)
 
     const allowAny = this.reflector.get<string[]>('allow-any', context.getHandler());
-    if (customer) return customer;
+    if (user) return user;
     if (allowAny) return true;
     throw new UnauthorizedException();
   }

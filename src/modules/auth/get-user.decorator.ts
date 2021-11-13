@@ -1,6 +1,6 @@
 import { createParamDecorator } from "@nestjs/common";
-import { Customer } from "src/modules/customer/customer.entity";
+import { User } from "../user/user.entity";
 
-export const GetCustomer = createParamDecorator((data, req): Customer => {
-  return req.customer;
+export const GetUser = createParamDecorator((data, req): User => {
+  return req.user;
 });
