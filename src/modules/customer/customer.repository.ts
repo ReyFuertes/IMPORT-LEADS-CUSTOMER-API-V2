@@ -5,7 +5,7 @@ import { RolesRepository } from '../roles/roles.repository';
 import { ProfileRepository } from '../profile/profile.repository';
 import * as bcrypt from 'bcrypt';
 import { Customer } from './customer.entity';
-import { CustomerStatusType, ICustomerDto, ICustomerPayload, ICustomerResponseDto } from './customer.dto';
+import { CustomerStatusType, CustomerUpdateStatus, ICustomerDto, ICustomerPayload, ICustomerResponseDto } from './customer.dto';
 import { BadRequestException } from '@nestjs/common';
 import { IProfileDto } from '../profile/profile.dto';
 import { CustomerUser } from '../customer-user/customer-user.entity';
@@ -16,6 +16,20 @@ import { Profile } from '../profile/profile.entity';
 
 @EntityRepository(Customer)
 export class CustomerRepository extends Repository<Customer> {
+
+  async updateStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
+    const exist = await this.findOne({ username: dto?.customer?.username });
+    if (exist && exist.status === CustomerStatusType.Pending) {
+      const updatedCustomer = await this.save({ ...exist, status: CustomerStatusType.Approved });
+      return {
+        id: updatedCustomer?.id,
+        status: updatedCustomer?.status,
+        username: updatedCustomer?.username
+      };
+    } else {
+      throw new BadRequestException('Update status failed.');
+    }
+  }
 
   async deleteById(id: string): Promise<ICustomerDto> {
     const exist = await this.findOne({ id });

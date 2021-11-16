@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BaseService } from 'src/base.service';
-import { ICustomerDto, ICustomerPayload, ICustomerResponseDto } from './customer.dto';
+import { CustomerUpdateStatus, ICustomerDto, ICustomerPayload, ICustomerResponseDto } from './customer.dto';
 import { Customer } from './customer.entity';
 import { CustomerRepository } from './customer.repository';
 
@@ -9,6 +9,10 @@ import { CustomerRepository } from './customer.repository';
 export class CustomerService extends BaseService<Customer> {
   constructor(@InjectRepository(CustomerRepository) public repo: CustomerRepository) {
     super(repo);
+  }
+  
+  async updateStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
+    return await this.repo.updateStatus(dto);
   }
 
   async deleteById(id: string): Promise<ICustomerDto> {

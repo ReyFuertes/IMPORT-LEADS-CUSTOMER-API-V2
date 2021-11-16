@@ -4,6 +4,10 @@ import { IAccessesDto } from "src/modules/accesses/accesses.dto";
 import { IRolesDto } from "src/modules/roles/roles.dto";
 import { ICustomerUserDto } from "../customer-user/customer-user.dto";
 
+export interface CustomerUpdateStatus {
+  customer: ICustomerDto;
+  status: CustomerStatusType;
+}
 export enum CustomerStatusType {
   Pending = 0,
   Approved = 1,

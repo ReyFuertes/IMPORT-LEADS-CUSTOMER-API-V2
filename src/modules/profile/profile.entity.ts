@@ -56,6 +56,9 @@ export class Profile extends BaseEntity {
   @Column({ nullable: true })
   image: string;
 
+  @Column({ nullable: true })
+  website_url: string;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: string;
 

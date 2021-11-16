@@ -1,11 +1,15 @@
 import { Controller, Get, Post, Body, Param, Delete, Patch, Query, SetMetadata, UseGuards, Req } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { ICustomerDto, ICustomerPayload, ICustomerResponseDto } from './customer.dto';
+import { CustomerUpdateStatus, ICustomerDto, ICustomerPayload, ICustomerResponseDto } from './customer.dto';
 import { CustomerService } from './customer.service';
 
 @Controller('customer')
 export class CustomerController {
   constructor(private srv: CustomerService) { }
+
+  @Patch('status')
+  updateStatus(@Body() dto: CustomerUpdateStatus): Promise<ICustomerDto> {
+    return this.srv.updateStatus(dto);
+  }
 
   @Delete('/:id')
   delete(@Param('id') id: string): Promise<ICustomerDto> {
