@@ -4,6 +4,7 @@ import { Profile } from '../profile/profile.entity';
 import { Accesses } from '../accesses/accesses.entity';
 import { Roles } from '../roles/roles.entity';
 import { CustomerUser } from "../customer-user/customer-user.entity";
+import { Migrate } from "../migrate/migrate.entity";
 
 @Entity({synchronize: false })
 @Unique(['username'])
@@ -33,6 +34,9 @@ export class Customer extends BaseEntity {
 
   @OneToMany(() => CustomerUser, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   customer_user: CustomerUser;
+
+  @OneToMany(() => Migrate, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
+  migrate: Migrate;
 
   @OneToMany(() => Roles, c => c.customer,
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })

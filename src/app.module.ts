@@ -11,6 +11,7 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { RoleModule } from './modules/role/role.module';
 import { CustomerUserModule } from './modules/customer-user/customer-user.module';
+import { MigrateModule } from './modules/migrate/migrate.module';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { CustomerUserModule } from './modules/customer-user/customer-user.module
     AccessesModule,
     RolesModule,
     RoleModule,
-    CustomerUserModule
+    CustomerUserModule,
+    MigrateModule
   ],
   controllers: [],
   providers: [],
