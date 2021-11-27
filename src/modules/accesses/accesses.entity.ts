@@ -9,9 +9,9 @@ export class Accesses extends BaseEntity {
   @Generated('uuid')
   id: string;
 
-  // @ManyToOne(() => Customer, c => c.accesses, { nullable: true, onDelete: 'CASCADE' })
-  // @JoinColumn({ name: 'customer_id' })
-  // customer: Customer;
+  @ManyToOne(() => Customer, c => c.accesses, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'customer_id' })
+  customer: Customer;
 
   @ManyToOne(() => CustomerUser, c => c.accesses, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'customer_user_id' })

@@ -11,6 +11,18 @@ export class CustomerService extends BaseService<Customer> {
     super(repo);
   }
   
+  async onboardCustomer(dto: any): Promise<ICustomerResponseDto> {
+    return this.repo.onboardCustomer(dto);
+  }
+  
+  async isInvited(id: string): Promise<ICustomerDto> {
+    return await this.repo.isInvited(id);
+  }
+
+  async onInvite(dto: ICustomerDto[]): Promise<ICustomerDto[]> {
+    return await this.repo.onInvite(dto);
+  }
+
   async updateStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
     return await this.repo.updateStatus(dto);
   }

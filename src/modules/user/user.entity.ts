@@ -20,6 +20,9 @@ export class User extends BaseEntity {
   @Column({ nullable: false, default: false })
   is_master_admin: boolean;
 
+  @Column({ nullable: false, default: 0 })
+  is_change_password: number;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: string;
 

@@ -7,6 +7,21 @@ import { AuthGuard } from '@nestjs/passport';
 export class UserController {
   constructor(private srv: UserService) { }
 
+  @Patch()
+  updateUser(@Body() dto: IUserDto): Promise<IUserDto> {
+    return this.srv.updateUser(dto);
+  }
+
+  @Get('/:id')
+  getById(@Param('id') id: string): Promise<IUserDto> {
+    return this.srv.getById(id);
+  }
+
+  @Get()
+  getAll(@Query() dto: any): Promise<IUserDto[]> {
+    return this.srv.getUsers(dto);
+  }
+
   @Delete('/:id')
   @UseGuards(AuthGuard('jwt'))
   delete(@Param('id') id: string): Promise<IUserDto> {
@@ -15,7 +30,7 @@ export class UserController {
 
   @Post()
   @UseGuards(AuthGuard('jwt'))
-  create(@Body() dto: IUserDto, @Req() req: any): Promise<void> {
+  create(@Body() dto: IUserDto, @Req() req: any): Promise<IUserDto> {
     return this.srv.createUser(dto, req?.user);
   }
 }

@@ -12,7 +12,7 @@ export class Access extends BaseEntity {
   access_name: string;
 
   @Column({ nullable: true })
-  customer_route: string;
+  access_route: string;
 
   @ManyToOne(() => Access, p => p.id, { nullable: true })
   @JoinColumn({ name: 'parent_id' })

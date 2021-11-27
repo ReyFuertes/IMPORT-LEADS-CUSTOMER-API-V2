@@ -27,16 +27,7 @@ export interface ICustomerPayload {
     username?: string;
     password?: string;
   },
-  profile: {
-    id?: string;
-    firstname?: string;
-    lastname?: string;
-    phone_number?: string;
-    address?: string;
-    company_name?: string;
-    company_address?: string;
-    language?: string;
-  },
+  profile: IProfileDto,
   users: any[];
 }
 export interface ICustomerDto {

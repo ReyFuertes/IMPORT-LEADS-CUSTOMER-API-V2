@@ -21,7 +21,7 @@ export class AuthService extends BaseService<User> {
       } else {
         const payload = { id: user.id, username: user.username };
         const accessToken = await this.jwtSrv.sign(payload);
-  
+        
         return { accessToken, user: { id: user?.id, username: user?.username } };
       }
     } catch (error) {

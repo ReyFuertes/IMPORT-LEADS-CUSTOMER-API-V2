@@ -12,6 +12,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { RoleModule } from './modules/role/role.module';
 import { CustomerUserModule } from './modules/customer-user/customer-user.module';
 import { MigrateModule } from './modules/migrate/migrate.module';
+import { UsersModule } from './modules/user/user.module';
 
 @Module({
   imports: [
@@ -25,7 +26,8 @@ import { MigrateModule } from './modules/migrate/migrate.module';
     RolesModule,
     RoleModule,
     CustomerUserModule,
-    MigrateModule
+    MigrateModule,
+    UsersModule
   ],
   controllers: [],
   providers: [],

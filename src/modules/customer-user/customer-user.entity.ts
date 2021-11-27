@@ -19,6 +19,9 @@ export class CustomerUser extends BaseEntity {
   password: string;
 
   @Column({ nullable: true })
+  text_password: string;
+
+  @Column({ nullable: true })
   salt: string;
 
   @Column({ nullable: true, default: 0 })

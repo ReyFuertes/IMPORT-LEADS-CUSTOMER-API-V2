@@ -10,5 +10,6 @@ export interface IUserDto {
   username?: string;
   password?: string;
   salt?: string;
+  created_at?: string;
 }
 export class GetUserDto extends GetDto { }

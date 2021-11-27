@@ -6,7 +6,7 @@ import { Roles } from '../roles/roles.entity';
 import { CustomerUser } from "../customer-user/customer-user.entity";
 import { Migrate } from "../migrate/migrate.entity";
 
-@Entity({synchronize: false })
+@Entity({ synchronize: false })
 @Unique(['username'])
 export class Customer extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -18,6 +18,9 @@ export class Customer extends BaseEntity {
 
   @Column({ nullable: true })
   password: string;
+
+  @Column({ nullable: true })
+  text_password: string;
 
   @Column({ nullable: true })
   salt: string;
@@ -32,6 +35,9 @@ export class Customer extends BaseEntity {
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   profile: Profile;
 
+  @OneToMany(() => Customer, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
+  customer: Customer;
+
   @OneToMany(() => CustomerUser, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   customer_user: CustomerUser;
 
@@ -41,6 +47,10 @@ export class Customer extends BaseEntity {
   @OneToMany(() => Roles, c => c.customer,
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   roles: Roles[];
+
+  @OneToMany(() => Accesses, c => c.customer,
+    { nullable: true, onDelete: 'CASCADE' })
+  accesses: Accesses[];
 
   async validatePassword(password: string): Promise<boolean> {
     const hash = await bcrypt.hash(password, this.salt);
