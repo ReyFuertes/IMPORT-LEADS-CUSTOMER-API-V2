@@ -1,0 +1,16 @@
+[
+  {
+    "name": "default",
+    "type": "postgres",
+    "host": "cil-china-db.postgres.database.azure.com",
+    "port": 5432,
+    "username": "cilchinaadmin@cil-china-db",
+    "password": "enVXKzgSEEDzbtLVS26FrzcqX6ZfnCj3n2DeSR6V",
+    "database": "il-customer-db",
+    "entities": ["dist/**/*.entity{ .ts,.js}"],
+    "synchronize": true,
+    "migrations": ["dist/migrations/*{.ts,.js}"],
+    "migrationsTableName": "migrations_typeorm",
+    "migrationsRun": true
+  }
+]

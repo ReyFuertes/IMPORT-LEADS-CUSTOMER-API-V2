@@ -6,7 +6,7 @@ import { Roles } from '../roles/roles.entity';
 import { CustomerUser } from "../customer-user/customer-user.entity";
 import { Migrate } from "../migrate/migrate.entity";
 
-@Entity({synchronize: false })
+@Entity({synchronize: true })
 @Unique(['username'])
 export class Customer extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')

@@ -2,7 +2,7 @@ import { BaseEntity, PrimaryGeneratedColumn, Generated, ManyToOne, OneToOne, Col
 import { Customer } from "src/modules/customer/customer.entity";
 import { CustomerUser } from "../customer-user/customer-user.entity";
 
-@Entity({synchronize: false })
+@Entity({synchronize: true })
 export class Profile extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')
@@ -58,6 +58,12 @@ export class Profile extends BaseEntity {
 
   @Column({ nullable: true })
   website_url: string;
+
+  @Column({ nullable: true })
+  api_url: string;
+
+  @Column({ nullable: true })
+  database_name: string;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: string;

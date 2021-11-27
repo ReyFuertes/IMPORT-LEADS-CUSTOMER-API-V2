@@ -66,7 +66,7 @@ export class CustomerRepository extends Repository<Customer> {
       customer.status = CustomerStatusType.Pending;
       new_customer = await this.save(customer);
 
-      const { address, company_address, company_name, firstname, lastname, phone_number, language } = dto?.profile;
+      const { address, company_address, company_name, firstname, lastname, phone_number, language, api_url } = dto?.profile;
       await profile_repo.save({
         address,
         company_address,
@@ -76,7 +76,8 @@ export class CustomerRepository extends Repository<Customer> {
         phone_number,
         email: new_customer?.username,
         customer: new_customer,
-        language
+        language,
+        api_url
       });
 
       await Promise.all([dto?.users?.forEach(async (customer_user_info: ICustomerUserDto) => {
@@ -124,7 +125,7 @@ export class CustomerRepository extends Repository<Customer> {
 
     const profile_query = profile_repo.createQueryBuilder('profile');
     const profile: IProfileDto = await profile_query
-      .select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address'])
+      .select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address', 'api_url', 'website_url', 'database_name'])
       .where("customer_id = :customer_id", { customer_id: result?.id })
       .getRawOne();
 
@@ -235,10 +236,9 @@ export class CustomerRepository extends Repository<Customer> {
         customer.salt = await bcrypt.genSalt();
         customer.password = await this.hashPassword(password, customer.salt);
       }
-      customer.status = CustomerStatusType.Pending;
       customer_to_update = await this.save(customer);
 
-      const { id, address, company_address, company_name, firstname, lastname, phone_number, language } = dto?.profile;
+      const { id, address, company_address, company_name, firstname, lastname, phone_number, language, api_url } = dto?.profile;
       await profile_repo.save({
         id,
         address,
@@ -249,7 +249,8 @@ export class CustomerRepository extends Repository<Customer> {
         phone_number,
         email: customer_to_update?.username,
         customer: customer_to_update,
-        language
+        language,
+        api_url
       });
 
       try {

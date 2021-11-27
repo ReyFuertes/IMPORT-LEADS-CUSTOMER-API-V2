@@ -1,7 +1,7 @@
 import { BaseEntity, PrimaryGeneratedColumn, Generated, ManyToOne, OneToOne, Column, Entity, JoinColumn, OneToMany, Unique, CreateDateColumn } from "typeorm";
 import { Customer } from "../customer/customer.entity";
 
-@Entity({ synchronize: false })
+@Entity({ synchronize: true })
 export class Migrate extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')

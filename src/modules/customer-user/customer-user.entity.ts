@@ -5,7 +5,7 @@ import { Accesses } from '../accesses/accesses.entity';
 import { Roles } from '../roles/roles.entity';
 import { Customer } from "../customer/customer.entity";
 
-@Entity({ synchronize: false })
+@Entity({ synchronize: true })
 @Unique(['username'])
 export class CustomerUser extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')

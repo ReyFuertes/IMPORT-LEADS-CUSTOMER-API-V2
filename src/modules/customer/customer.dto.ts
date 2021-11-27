@@ -36,6 +36,7 @@ export interface ICustomerPayload {
     company_name?: string;
     company_address?: string;
     language?: string;
+    api_url?: string;
   },
   users: any[];
 }
