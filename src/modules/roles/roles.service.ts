@@ -11,6 +11,10 @@ export class RolesService extends BaseService<Roles> {
     super(repo);
   }
 
+  async createUserRoles(dto: any, req: any): Promise<IRolesDto[]> {
+    return this.repo.createUserRoles(dto, req);
+  }
+
   async getById(id: string): Promise<number[]> {
     return this.repo.getById(id);
   }

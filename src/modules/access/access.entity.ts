@@ -1,7 +1,7 @@
 import { BaseEntity, PrimaryGeneratedColumn, Generated, Column, Entity, Unique, OneToMany, JoinColumn, ManyToOne } from "typeorm";
 import { Accesses } from '../accesses/accesses.entity';
 
-@Entity({synchronize: true })
+@Entity({synchronize: false })
 @Unique(['access_name'])
 export class Access extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -12,7 +12,7 @@ export class Access extends BaseEntity {
   access_name: string;
 
   @Column({ nullable: true })
-  customer_route: string;
+  access_route: string;
 
   @ManyToOne(() => Access, p => p.id, { nullable: true })
   @JoinColumn({ name: 'parent_id' })

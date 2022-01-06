@@ -6,6 +6,21 @@ import { CustomerService } from './customer.service';
 export class CustomerController {
   constructor(private srv: CustomerService) { }
 
+  @Post('onboard')
+  onboardCustomer(@Body() dto: any, @Req() req: any): Promise<ICustomerResponseDto> {
+    return this.srv.onboardCustomer(dto);
+  }
+
+  @Get('/:id/invited')
+  isInvited(@Param('id') id: string): Promise<ICustomerDto> {
+    return this.srv.isInvited(id);
+  }
+
+  @Post('invite')
+  onInvite(@Body() dto: ICustomerDto[], @Req() req: any): Promise<ICustomerDto[]> {
+    return this.srv.onInvite(dto);
+  }
+
   @Patch('status')
   updateStatus(@Body() dto: CustomerUpdateStatus): Promise<ICustomerDto> {
     return this.srv.updateStatus(dto);

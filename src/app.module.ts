@@ -8,10 +8,11 @@ import { AccessModule } from './modules/access/access.module';
 import { AccessesModule } from './modules/accesses/accesses.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { PassportModule } from '@nestjs/passport';
-import { JwtModule } from '@nestjs/jwt';
 import { RoleModule } from './modules/role/role.module';
 import { CustomerUserModule } from './modules/customer-user/customer-user.module';
 import { MigrateModule } from './modules/migrate/migrate.module';
+import { UsersModule } from './modules/user/user.module';
+import { UserTokenModule } from './modules/user-token/user-token.module';
 
 @Module({
   imports: [
@@ -25,7 +26,9 @@ import { MigrateModule } from './modules/migrate/migrate.module';
     RolesModule,
     RoleModule,
     CustomerUserModule,
-    MigrateModule
+    MigrateModule,
+    UsersModule,
+    UserTokenModule
   ],
   controllers: [],
   providers: [],

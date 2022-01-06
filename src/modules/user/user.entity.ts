@@ -1,7 +1,7 @@
 import { BaseEntity, PrimaryGeneratedColumn, Generated, ManyToOne, OneToOne, Column, Entity, JoinColumn, OneToMany, Unique, CreateDateColumn } from "typeorm";
 import * as bcrypt from 'bcrypt'
 
-@Entity({ synchronize: true })
+@Entity({ synchronize: false })
 @Unique(['username'])
 export class User extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')

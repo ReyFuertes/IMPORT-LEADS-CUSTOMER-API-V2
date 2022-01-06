@@ -1,8 +1,8 @@
 {
-  "name": "import-leads-customer-api",
+  "name": "iaad-admin-api",
   "version": "0.0.1",
   "description": "",
-  "author": "reyfuertes",
+  "author": "rfuertes",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -22,14 +22,15 @@
   },
   "dependencies": {
     "@nestjs/cli": "^8.0.0",
-    "@nestjs/schematics": "^8.0.0",
-    "@nestjs/testing": "^8.0.0",
     "@nestjs/common": "^8.0.6",
     "@nestjs/core": "^8.0.6",
     "@nestjs/jwt": "^8.0.0",
     "@nestjs/passport": "^8.0.1",
     "@nestjs/platform-express": "^8.0.6",
+    "@nestjs/schematics": "^8.0.0",
+    "@nestjs/testing": "^8.0.0",
     "@nestjs/typeorm": "^8.0.2",
+    "@sendgrid/mail": "^7.6.0",
     "@types/express": "^4.17.3",
     "@types/jest": "^27.0.1",
     "@types/node": "^13.9.1",

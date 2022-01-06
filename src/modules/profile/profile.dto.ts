@@ -17,5 +17,11 @@ export interface IProfileDto {
   self_intro?: string;
   position?: string;
   image?: string;
-  customer?: ICustomerDto
+  customer?: ICustomerDto;
+  address?: string;
+  phone_number?: string;
+  language?: string;
+  api_url?: string;
+  website_url?: string;
+  database_name?: string;
 }

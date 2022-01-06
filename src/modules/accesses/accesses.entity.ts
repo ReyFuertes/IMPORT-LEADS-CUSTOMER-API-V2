@@ -3,15 +3,15 @@ import { Customer } from '../customer/customer.entity';
 import { Access } from '../access/access.entity';
 import { CustomerUser } from "../customer-user/customer-user.entity";
 
-@Entity({synchronize: true })
+@Entity({synchronize: false })
 export class Accesses extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')
   id: string;
 
-  // @ManyToOne(() => Customer, c => c.accesses, { nullable: true, onDelete: 'CASCADE' })
-  // @JoinColumn({ name: 'customer_id' })
-  // customer: Customer;
+  @ManyToOne(() => Customer, c => c.accesses, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'customer_id' })
+  customer: Customer;
 
   @ManyToOne(() => CustomerUser, c => c.accesses, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'customer_user_id' })
