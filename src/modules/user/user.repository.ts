@@ -113,7 +113,6 @@ export class UserRepository extends Repository<User> {
 
   async createUser(dto: IUserDto, curr_user: any): Promise<IUserDto> {
     const exist = await this.findOne({ username: dto.username.toLowerCase() });
-
     if (!exist && dto) {
       const user = new User();
       user.username = String(dto?.username).toLowerCase();
@@ -138,7 +137,7 @@ export class UserRepository extends Repository<User> {
         username: new_user?.username,
         created_at: new_user?.created_at
       }
-    } 
+    }
   }
 }
 

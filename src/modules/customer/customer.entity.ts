@@ -1,10 +1,11 @@
-import { BaseEntity, PrimaryGeneratedColumn, Generated, ManyToOne, OneToOne, Column, Entity, JoinColumn, OneToMany, Unique, CreateDateColumn } from "typeorm";
+import { BaseEntity, PrimaryGeneratedColumn, Generated, OneToOne, Column, Entity, OneToMany, Unique, CreateDateColumn } from "typeorm";
 import * as bcrypt from 'bcrypt'
 import { Profile } from '../profile/profile.entity';
 import { Accesses } from '../accesses/accesses.entity';
 import { Roles } from '../roles/roles.entity';
 import { CustomerUser } from "../customer-user/customer-user.entity";
 import { Migrate } from "../migrate/migrate.entity";
+import { CustomerSubscription } from "../customer-subscription/customer-subscription.entity";
 
 @Entity({ synchronize: false })
 @Unique(['username'])
@@ -15,7 +16,7 @@ export class Customer extends BaseEntity {
 
   @Column({ nullable: true })
   username: string;
-
+  
   @Column({ nullable: true })
   password: string;
 
@@ -35,8 +36,8 @@ export class Customer extends BaseEntity {
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   profile: Profile;
 
-  @OneToMany(() => Customer, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
-  customer: Customer;
+  @OneToOne(() => CustomerSubscription, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
+  customer_subscription: CustomerSubscription;
 
   @OneToMany(() => CustomerUser, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   customer_user: CustomerUser;

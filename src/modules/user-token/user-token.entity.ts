@@ -1,6 +1,6 @@
 import { BaseEntity, Column, Entity,  Generated,  PrimaryGeneratedColumn,  Unique } from "typeorm";
 
-@Entity({ synchronize: true })
+@Entity({ synchronize: false })
 @Unique(['app_token'])
 export class UserToken extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')

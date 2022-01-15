@@ -13,6 +13,8 @@ import { CustomerUserModule } from './modules/customer-user/customer-user.module
 import { MigrateModule } from './modules/migrate/migrate.module';
 import { UsersModule } from './modules/user/user.module';
 import { UserTokenModule } from './modules/user-token/user-token.module';
+import { SubscriptionModule } from './modules/subscription/subscription.module';
+import { CustomerSubscriptionModule } from './modules/customer-subscription/customer-subscription.module';
 
 @Module({
   imports: [
@@ -28,7 +30,9 @@ import { UserTokenModule } from './modules/user-token/user-token.module';
     CustomerUserModule,
     MigrateModule,
     UsersModule,
-    UserTokenModule
+    UserTokenModule,
+    SubscriptionModule,
+    CustomerSubscriptionModule
   ],
   controllers: [],
   providers: [],

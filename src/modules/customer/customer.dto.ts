@@ -41,5 +41,12 @@ export interface ICustomerDto {
   customer_access?: IAccessesDto[];
   customer_role?: IRolesDto[];
   users?: ICustomerUserDto[];
+  message?: string;
+  create_status?: CustomerCreateStatusType;
+  subscription?: string;
+}
+export enum CustomerCreateStatusType {
+  success = 'Success',
+  failed = 'Failed'
 }
 export class GetCustomerDto extends GetDto { }

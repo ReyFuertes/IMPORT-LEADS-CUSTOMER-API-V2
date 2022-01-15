@@ -10,7 +10,7 @@ const SnakeNamingStrategy = require("typeorm-naming-strategies")
     password: 'p@55w0rd',
     database: 'iaad-customer',
     entities: [__dirname + 'dist/../**/*.entity.{js,ts}'],
-    synchronize: true,
+    synchronize: false,
     logging: false,
     namingStrategy: new SnakeNamingStrategy(),
     maxQueryExecutionTime: 300000,

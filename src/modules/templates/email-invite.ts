@@ -69,7 +69,7 @@ export const emailConfirmationTemplate = (user: IUserDto) => `<!DOCTYPE html PUB
                                                                         <table width="100%" cellspacing="0" cellpadding="0">
                                                                             <tbody>
                                                                                 <tr>
-                                                                                    <td class="esd-block-image es-p20r es-p20l" align="center" style="font-size: 0px;"><a target="_blank"><img class="adapt-img" src="${appConfig.web_url}/assets/image/logo.png" alt="Image" style="display: block;" title="Image" width="260"></a></td>
+                                                                                    <td class="esd-block-image es-p20r es-p20l" align="center" style="font-size: 0px;"><a target="_blank"><img class="adapt-img" src="https://rubucepo.sirv.com/Images/iaad/b140ca66-9dbc-4497-b737-797b3c77e0f7.png" alt="Image" style="display: block;" title="Image" width="260"></a></td>
                                                                                 </tr>
                                                                             </tbody>
                                                                         </table>
@@ -151,8 +151,8 @@ export const emailConfirmationTemplate = (user: IUserDto) => `<!DOCTYPE html PUB
                                                                                         <table class="es-table-not-adapt es-social" cellspacing="0" cellpadding="0">
                                                                                             <tbody>
                                                                                                 <tr>
-                                                                                                    <td class="es-p20r" valign="top" align="center"><a href=""><img title="Youtube" src="https://cilchinaclient.azurewebsites.net/assets/image/youtube.png" alt="Yt" width="32" height="32" style="margin-right:20px"></a></td>
-                                                                                                    <td valign="top" align="center"><a href="${appConfig.web_url}" target="_blank"><img title="LinkedIn" src="https://cilchinaclient.azurewebsites.net/assets/image/linkedin.png" alt="Tw" width="32" height="32"></a></td>
+                                                                                                    <td class="es-p20r" valign="top" align="center"><a href=""><img title="Youtube" src="https://rubucepo.sirv.com/Images/iaad/youtube.png" alt="Yt" width="32" height="32" style="margin-right:20px"></a></td>
+                                                                                                    <td valign="top" align="center"><a href="${appConfig.web_url}" target="_blank"><img title="LinkedIn" src="https://rubucepo.sirv.com/Images/iaad/linkedin.png" alt="Tw" width="32" height="32"></a></td>
                                                                                                 </tr>
                                                                                             </tbody>
                                                                                         </table>

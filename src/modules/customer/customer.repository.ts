@@ -5,7 +5,7 @@ import { RolesRepository } from '../roles/roles.repository';
 import { ProfileRepository } from '../profile/profile.repository';
 import * as bcrypt from 'bcrypt';
 import { Customer } from './customer.entity';
-import { CustomerStatusType, CustomerUpdateStatus, ICustomerDto, ICustomerPayload, ICustomerResponseDto } from './customer.dto';
+import { CustomerCreateStatusType, CustomerStatusType, CustomerUpdateStatus, ICustomerDto, ICustomerPayload, ICustomerResponseDto } from './customer.dto';
 import { BadRequestException } from '@nestjs/common';
 import { IProfileDto } from '../profile/profile.dto';
 import { CustomerUser } from '../customer-user/customer-user.entity';
@@ -20,6 +20,7 @@ import { validateEmail } from 'src/util/validate';
 import * as sgMail from '@sendgrid/mail';
 import { sendGridConfig } from '../config/sendgrid.config';
 import { emailConfirmationSender, emailConfirmationSubject, emailConfirmationTemplate } from '../templates/email-invite';
+import { CustomerSubscriptionRepository } from '../customer-subscription/customer-subscription.repository';
 
 @EntityRepository(Customer)
 export class CustomerRepository extends Repository<Customer> {
@@ -109,36 +110,61 @@ export class CustomerRepository extends Repository<Customer> {
   async isInvited(id: string): Promise<ICustomerDto> {
     const exist = await this.findOne({ where: { id } });
     if (exist) {
-      return { id: exist?.id, username: exist?.username }
+      const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
+      const customer_subscription = await customer_subscription_repo.findOne({
+        where: {
+          customer: { id: exist?.id }
+        },
+        relations: ['customer', 'subscription']
+      });
+      return {
+        id: exist?.id,
+        username: exist?.username,
+        subscription: customer_subscription?.subscription?.id
+      }
     }
     throw new BadRequestException(`Customer is not invited.`);
   }
 
   async onInvite(dto: ICustomerDto[]): Promise<ICustomerDto[]> {
-    let customers: ICustomerDto[] = [];
-
-    await Promise.all([dto?.forEach(async (_customer) => {
-      const exist = await this.findOne({ username: _customer?.username });
+    let results = await Promise.all(dto?.map(async (row) => {
+      const exist = await this.findOne({ username: row?.username });
       if (!exist) {
         const customer = new Customer();
-        customer.username = _customer?.username;
+        customer.username = row.username;
         customer.status = CustomerStatusType.Pending;
         const new_customer = await this.save(customer);
 
+        const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
+        await customer_subscription_repo.save({
+          customer: new_customer,
+          subscription: { id: row?.subscription }
+        });
+
         if (new_customer) {
           await this.sendEmail(new_customer);
-          customers.push({
-            id: new_customer?.id,
-            username: new_customer?.username
-          })
-          return { id: new_customer?.id }
+          return {
+            id: new_customer.id,
+            username: new_customer.username,
+            message: "Customer successfully added.",
+            create_status: CustomerCreateStatusType.success
+          };
+        } else {
+          return {
+            username: customer.username,
+            message: "Customer invite failed.",
+            create_status: CustomerCreateStatusType.failed
+          }
         }
-        throw new BadRequestException(`Customer ${_customer?.username} invited failed.`);
       } else {
-        throw new BadRequestException(`Customer ${_customer?.username} already existed.`);
+        return {
+          username: exist?.username,
+          message: "Customer already existed.",
+          create_status: CustomerCreateStatusType.failed
+        }
       }
-    })]);
-    return customers;
+    }));
+    return results;
   }
 
   async updateStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
@@ -229,31 +255,33 @@ export class CustomerRepository extends Repository<Customer> {
         const customer_user = new CustomerUser();
         customer_user.username = String(customer_user_info?.username).toLowerCase();
         customer_user.salt = await bcrypt.genSalt();
-        customer_user.password = await this.hashPassword(customer_user_info?.password, customer_user.salt);
+        customer_user.password = await this.hashPassword(customer_user_info.password, customer_user.salt);
         const new_customer_user = await customer_user_repo.save({
           ...customer_user,
           customer: new_customer
         });
-        /* profile */
+
         await profile_repo.save({
           email: customer_user_info?.username,
           language,
           customer_user: new_customer_user,
         });
-        /* access */
+
         const access = customer_user_info?.accesses?.map(access => {
           return { customer_user: new_customer_user, access }
         });
         await accesses_repo.save(access);
-        /* roles */
+
         const roles = customer_user_info?.roles?.map(role => {
           return { customer_user: new_customer_user, role }
         });
         await roles_repo.save(roles);
+
+        await this.sendEmail(new_customer);
       })]);
 
     } catch (error) {
-      throw new BadRequestException(`Customer failed: ${error}`);
+      throw new BadRequestException(`Customer create failed: ${error}`);
     }
     return await this.getCustomerById(new_customer?.id);
   }
