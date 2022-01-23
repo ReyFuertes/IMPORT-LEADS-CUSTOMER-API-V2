@@ -26,6 +26,5 @@ export class Subscription extends BaseEntity {
   created_at: string;
 
   @OneToOne(() => CustomerSubscription, c => c.subscription, { eager: true, onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'customer_id' })
   customer_subscription: CustomerSubscription;
 }

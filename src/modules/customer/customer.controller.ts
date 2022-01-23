@@ -12,7 +12,7 @@ export class CustomerController {
   }
 
   @Get('/:id/invited')
-  isInvited(@Param('id') id: string): Promise<ICustomerDto> {
+  isInvited(@Param('id') id: string): Promise<ICustomerResponseDto> {
     return this.srv.isInvited(id);
   }
 
@@ -32,7 +32,7 @@ export class CustomerController {
   }
 
   @Get('/:id')
-  getCustomerById(@Param('id') id: string): Promise<ICustomerDto> {
+  getCustomerById(@Param('id') id: string): Promise<ICustomerResponseDto> {
     return this.srv.getCustomerById(id);
   }
 
@@ -42,12 +42,12 @@ export class CustomerController {
   }
 
   @Post()
-  create(@Body() dto: any, @Req() req: any): Promise<ICustomerResponseDto> {
+  create(@Body() dto: ICustomerPayload, @Req() req: any): Promise<ICustomerResponseDto> {
     return this.srv.createCustomer(dto);
   }
 
   @Patch()
-  update(@Body() dto: ICustomerPayload): Promise<ICustomerDto> {
+  update(@Body() dto: ICustomerPayload): Promise<ICustomerResponseDto> {
     return this.srv.updateCustomer(dto);
   }
 }

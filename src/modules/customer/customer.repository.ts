@@ -21,6 +21,9 @@ import * as sgMail from '@sendgrid/mail';
 import { sendGridConfig } from '../config/sendgrid.config';
 import { emailConfirmationSender, emailConfirmationSubject, emailConfirmationTemplate } from '../templates/email-invite';
 import { CustomerSubscriptionRepository } from '../customer-subscription/customer-subscription.repository';
+import { ICustomerSubscriptionDto } from '../customer-subscription/customer-subscription.dto';
+import { Subscription } from '../subscription/subscription.entity';
+import { map } from 'rxjs';
 
 @EntityRepository(Customer)
 export class CustomerRepository extends Repository<Customer> {
@@ -107,7 +110,7 @@ export class CustomerRepository extends Repository<Customer> {
     return await this.getCustomerById(new_customer?.id);
   }
 
-  async isInvited(id: string): Promise<ICustomerDto> {
+  async isInvited(id: string): Promise<ICustomerResponseDto> {
     const exist = await this.findOne({ where: { id } });
     if (exist) {
       const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
@@ -117,10 +120,44 @@ export class CustomerRepository extends Repository<Customer> {
         },
         relations: ['customer', 'subscription']
       });
+
+      //get customer profile
+      const profile_repo = getCustomRepository(ProfileRepository);
+      const profile_query = profile_repo.createQueryBuilder('profile');
+      const profile_result: IProfileDto = await profile_query
+        .select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address', 'api_url', 'website_url', 'database_name'])
+        .where("customer_id = :customer_id", { customer_id: id })
+        .getRawOne();
+
+      const customer_user_repo = getCustomRepository(CustomerUserRepository);
+      const customer_users_result = await customer_user_repo.find({
+        select: ['id', 'username', 'created_at'],
+        where: { customer: { id } }
+      });
+
+      const roles_repo = getCustomRepository(RolesRepository);
+      const access_repo = getCustomRepository(AccessesRepository);
+      const customer_users = await Promise.all(customer_users_result?.map(async (customer_user) => {
+        const roles_result = await roles_repo.find({
+          where: { customer_user: { id: customer_user?.id } },
+          relations: ['role']
+        });
+        const access_result = await access_repo.find({
+          where: { customer_user: { id: customer_user?.id } },
+          relations: ['access']
+        });
+        return {
+          ...customer_user,
+          roles: roles_result?.map(row => row?.role?.id),
+          access: access_result?.map(row => row?.access?.id)
+        }
+      }))
       return {
         id: exist?.id,
         username: exist?.username,
-        subscription: customer_subscription?.subscription?.id
+        subscription: customer_subscription?.subscription?.id,
+        customer_users,
+        profile: profile_result
       }
     }
     throw new BadRequestException(`Customer is not invited.`);
@@ -134,7 +171,7 @@ export class CustomerRepository extends Repository<Customer> {
         customer.username = row.username;
         customer.status = CustomerStatusType.Pending;
         const new_customer = await this.save(customer);
-
+        console.log('onInvite', row)
         const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
         await customer_subscription_repo.save({
           customer: new_customer,
@@ -170,7 +207,7 @@ export class CustomerRepository extends Repository<Customer> {
   async updateStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
     const exist = await this.findOne({ username: dto?.customer?.username });
 
-    if (exist && exist?.status === CustomerStatusType.Pending) {
+    if (exist && exist?.status === CustomerStatusType.Ready) {
       const updatedCustomer = await this.save({ ...exist, status: CustomerStatusType.Approved });
       return {
         id: updatedCustomer?.id,
@@ -178,7 +215,7 @@ export class CustomerRepository extends Repository<Customer> {
         username: updatedCustomer?.username
       };
     } else {
-      throw new BadRequestException('Update status failed.');
+      throw new BadRequestException(`Update status failed ${exist}`);
     }
   }
 
@@ -187,11 +224,13 @@ export class CustomerRepository extends Repository<Customer> {
     if (exist) {
       this.createQueryBuilder()
         .delete()
-        .from(CustomerUser)
+        .from(Customer)
         .where("id = :id", { id })
         .execute();
       delete exist?.password;
       delete exist?.salt;
+      delete exist?.text_password;
+
       return exist;
     }
     return null;
@@ -201,7 +240,7 @@ export class CustomerRepository extends Repository<Customer> {
     return bcrypt.hash(password, salt);
   }
 
-  async createCustomer(dto: any): Promise<ICustomerResponseDto> {
+  async createCustomer(dto: ICustomerPayload): Promise<ICustomerResponseDto> {
     const profile_repo = getCustomRepository(ProfileRepository);
     const customer_user_repo = getCustomRepository(CustomerUserRepository);
     const role_repo = getCustomRepository(RoleRepository);
@@ -217,17 +256,28 @@ export class CustomerRepository extends Repository<Customer> {
       customer.username = String(username).toLowerCase();
       customer.salt = await bcrypt.genSalt();
       customer.password = await this.hashPassword(password, customer.salt);
-      customer.status = CustomerStatusType.Pending;
+      if(dto?.profile?.api_url && dto?.profile?.website_url) {
+        customer.status = CustomerStatusType.Ready;
+      } else {
+        customer.status = CustomerStatusType.Pending;
+      }
       new_customer = await this.save(customer);
 
-      //set admin role
+      //get customer subsription
+      const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
+      await customer_subscription_repo.save({
+        customer: new_customer,
+        subscription: { id: dto?.subscription }
+      });
+
+      //save admin role
       const admin_role = await role_repo.findOne({ where: { role_name: 'admin' } });
       if (admin_role) {
         await roles_repo.save({ customer, role: admin_role });
       } else {
         throw new BadRequestException(`Customer failed: Admin role not set.`);
       }
-      //set access
+      //save access
       const access_query = access_repo.createQueryBuilder('access');
       let customer_access_id_results: any[] = await access_query.select(['id']).getRawMany();
       const accesses_payload = customer_access_id_results?.map(access => {
@@ -294,20 +344,35 @@ export class CustomerRepository extends Repository<Customer> {
       .orderBy('customer.created_at', 'DESC')
       .getRawOne();
 
+    //get customer profile
     const profile_repo = getCustomRepository(ProfileRepository);
-
     const profile_query = profile_repo.createQueryBuilder('profile');
     const profile: IProfileDto = await profile_query
       .select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address', 'api_url', 'website_url', 'database_name'])
       .where("customer_id = :customer_id", { customer_id: result?.id })
       .getRawOne();
 
+    //get customer user
     const customer_user_repo = getCustomRepository(CustomerUserRepository);
     const customer_user_query = customer_user_repo.createQueryBuilder('customer_user');
     let customer_users: ICustomerUserDto[] = await customer_user_query
       .select(['id', 'username', 'status'])
       .where("customer_id = :customer_id", { customer_id: result?.id })
       .getRawMany();
+
+    //get customer subsription
+    const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
+    const customer_subscription_query = customer_subscription_repo.createQueryBuilder('customer_subscription');
+    let customer_subscription_result: ICustomerSubscriptionDto = await customer_subscription_query
+      .select(['customer_subscription.id', 'subscription.id', 'subscription.name', 'subscription.rate', 'subscription.description'])
+      .innerJoinAndMapOne(
+        "customer_subscription.subscription",
+        Subscription,
+        "subscription",
+        "subscription.id = customer_subscription.subscription_id"
+      )
+      .where("customer_id = :customer_id", { customer_id: result?.id })
+      .getOne();
 
     const roles_repo = getCustomRepository(RolesRepository);
     const accesses_repo = getCustomRepository(AccessesRepository);
@@ -326,17 +391,11 @@ export class CustomerRepository extends Repository<Customer> {
       const roles = roles_result?.map(value => {
         return value?.role?.id
       })
-      return {
-        ...cust_user,
-        accesses,
-        roles
-      }
+      return { ...cust_user, accesses, roles }
     }));
 
     return {
-      ...result,
-      profile,
-      customer_users
+      ...result, profile, customer_users, subscription: customer_subscription_result?.subscription
     }
   }
 
@@ -386,6 +445,12 @@ export class CustomerRepository extends Repository<Customer> {
         .where("customer_id = :customer_id", { customer_id: customer?.id })
         .getRawMany();
 
+      const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
+      const customer_subscription_result = await customer_subscription_repo.findOne({
+        where: { customer: { id: customer?.id } },
+        relations: ['subscription']
+      });
+
       const customer_users = await Promise.all(customer_users_results?.map(async (customer_user) => {
         const roles_repo = getCustomRepository(RolesRepository);
         const roles = await roles_repo.find({
@@ -399,22 +464,23 @@ export class CustomerRepository extends Repository<Customer> {
           relations: ['access']
         });
 
-        return {
-          ...customer_user,
-          accesses,
-          roles
-        }
+        return { ...customer_user, accesses, roles }
       }));
 
       return {
-        ...customer,
-        customer_users
+        ...customer, customer_users, subscription: {
+          id: customer_subscription_result?.subscription?.id,
+          name: customer_subscription_result?.subscription?.name,
+          rate: customer_subscription_result?.subscription?.rate,
+          max_users: customer_subscription_result?.subscription?.max_users,
+          description: customer_subscription_result?.subscription?.description
+        }
       }
     }));
     return response;
   }
 
-  async updateCustomer(dto: ICustomerPayload): Promise<ICustomerDto> {
+  async updateCustomer(dto: ICustomerPayload): Promise<ICustomerResponseDto> {
     const profile_repo = getCustomRepository(ProfileRepository);
     const customer_user_repo = getCustomRepository(CustomerUserRepository);
     const roles_repo = getCustomRepository(RolesRepository);
@@ -431,6 +497,9 @@ export class CustomerRepository extends Repository<Customer> {
       if (password) {
         customer.salt = await bcrypt.genSalt();
         customer.password = await this.hashPassword(password, customer.salt);
+      }
+      if(dto?.profile?.api_url && dto?.profile?.website_url) {
+        customer.status = CustomerStatusType.Ready;
       }
       customer_to_update = await this.save(customer);
 

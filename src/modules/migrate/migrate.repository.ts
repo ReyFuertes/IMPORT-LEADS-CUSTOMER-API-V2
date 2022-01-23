@@ -7,7 +7,6 @@ import { ICustomerDto } from '../customer/customer.dto';
 export class MigrateRepository extends Repository<Migrate> {
 
   async migrate(dto: ICustomerDto): Promise<ICustomerDto> {
-    console.log(dto)
     return
   }
 }

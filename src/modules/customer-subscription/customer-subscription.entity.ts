@@ -1,4 +1,4 @@
-import { BaseEntity, PrimaryGeneratedColumn, Generated, Column, Entity, CreateDateColumn, OneToOne, JoinColumn } from "typeorm";
+import { BaseEntity, PrimaryGeneratedColumn, Generated, Column, Entity, CreateDateColumn, OneToOne, JoinColumn, ManyToOne } from "typeorm";
 import { Customer } from "../customer/customer.entity";
 import { Subscription } from "../subscription/subscription.entity";
 
@@ -8,12 +8,12 @@ export class CustomerSubscription extends BaseEntity {
   @Generated('uuid')
   id: string;
 
-  @OneToOne(() => Customer, c => c.customer_subscription,
+  @ManyToOne(() => Customer, c => c.customer_subscription,
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   @JoinColumn({ name: 'customer_id' })
   customer: Customer;
 
-  @OneToOne(() => Subscription, c => c.customer_subscription,
+  @ManyToOne(() => Subscription, c => c.customer_subscription,
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   @JoinColumn({ name: 'subscription_id' })
   subscription: Subscription;

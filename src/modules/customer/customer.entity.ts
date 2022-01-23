@@ -36,7 +36,7 @@ export class Customer extends BaseEntity {
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   profile: Profile;
 
-  @OneToOne(() => CustomerSubscription, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
+  @OneToMany(() => CustomerSubscription, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   customer_subscription: CustomerSubscription;
 
   @OneToMany(() => CustomerUser, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })

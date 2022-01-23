@@ -3,6 +3,8 @@ import { RolesType, GetDto } from "src/models/generic.model";
 import { IAccessesDto } from "src/modules/accesses/accesses.dto";
 import { IRolesDto } from "src/modules/roles/roles.dto";
 import { ICustomerUserDto } from "../customer-user/customer-user.dto";
+import { ISubscriptionDto } from "../subscription/subscription.dto";
+import { IUserDto } from "../user/user.dto";
 
 export interface CustomerUpdateStatus {
   customer: ICustomerDto;
@@ -10,8 +12,9 @@ export interface CustomerUpdateStatus {
 }
 export enum CustomerStatusType {
   Pending = 0,
-  Approved = 1,
-  Cancelled = 2
+  Ready = 1,
+  Approved = 2,
+  Cancelled = 3
 }
 export interface ICustomerResponseDto {
   created_at?: string;
@@ -20,15 +23,20 @@ export interface ICustomerResponseDto {
   profile?: IProfileDto;
   status?: number;
   username?: string;
+  subscription?: ISubscriptionDto | string,
+  roles?: string[],
+  access?: string[]
 }
 export interface ICustomerPayload {
   id?: string;
   email_password: {
-    username?: string;
-    password?: string;
+    id?: string
+    username: string;
+    password: string;
   },
-  profile: IProfileDto,
-  users: any[];
+  profile?: IProfileDto,
+  subscription: string;
+  users?: any[];
 }
 export interface ICustomerDto {
   id?: string;
@@ -44,6 +52,7 @@ export interface ICustomerDto {
   message?: string;
   create_status?: CustomerCreateStatusType;
   subscription?: string;
+  text_password?: string;
 }
 export enum CustomerCreateStatusType {
   success = 'Success',

@@ -15,7 +15,7 @@ export class CustomerService extends BaseService<Customer> {
     return this.repo.onboardCustomer(dto);
   }
   
-  async isInvited(id: string): Promise<ICustomerDto> {
+  async isInvited(id: string): Promise<ICustomerResponseDto> {
     return await this.repo.isInvited(id);
   }
 
@@ -31,7 +31,7 @@ export class CustomerService extends BaseService<Customer> {
     return await this.repo.deleteById(id);
   }
  
-  async getCustomerById(id: string): Promise<ICustomerDto> {
+  async getCustomerById(id: string): Promise<ICustomerResponseDto> {
     return this.repo.getCustomerById(id);
   }
 
@@ -39,11 +39,11 @@ export class CustomerService extends BaseService<Customer> {
     return this.repo.getCustomers(dto);
   }
 
-  async updateCustomer(dto: ICustomerPayload): Promise<ICustomerDto> {
+  async updateCustomer(dto: ICustomerPayload): Promise<ICustomerResponseDto> {
     return this.repo.updateCustomer(dto);
   }
 
-  async createCustomer(dto: any): Promise<ICustomerResponseDto> {
+  async createCustomer(dto: ICustomerPayload): Promise<ICustomerResponseDto> {
     return this.repo.createCustomer(dto);
   }
 }

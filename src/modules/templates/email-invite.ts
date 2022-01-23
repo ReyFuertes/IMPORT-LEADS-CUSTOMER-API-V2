@@ -101,7 +101,7 @@ export const emailConfirmationTemplate = (user: IUserDto) => `<!DOCTYPE html PUB
                                                                             <tbody>
                                                                                 <tr>
                                                                                     <td class="esd-block-text es-m-txt-c" align="center">
-                                                                                        <h2>Hey ${user?.username}!</h2>
+                                                                                        <h2 style="text-transform: capitalize">Hey ${user?.username}!</h2>
                                                                                     </td>
                                                                                 </tr>
                                                                                 <tr>
