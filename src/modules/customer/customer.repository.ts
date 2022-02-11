@@ -23,10 +23,24 @@ import { emailConfirmationSender, emailConfirmationSubject, emailConfirmationTem
 import { CustomerSubscriptionRepository } from '../customer-subscription/customer-subscription.repository';
 import { ICustomerSubscriptionDto } from '../customer-subscription/customer-subscription.dto';
 import { Subscription } from '../subscription/subscription.entity';
-import { map } from 'rxjs';
+import { debounceTime, delay } from 'rxjs';
 
 @EntityRepository(Customer)
 export class CustomerRepository extends Repository<Customer> {
+
+  async resetStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
+    const exist = await this.findOne({ username: dto?.customer?.username });
+    if (exist) {
+      const updatedCustomer = await this.save({ ...exist, status: CustomerStatusType.Pending });
+      return {
+        id: updatedCustomer?.id,
+        status: updatedCustomer?.status,
+        username: updatedCustomer?.username
+      };
+    } else {
+      throw new BadRequestException(`Reset status failed ${exist?.username}`);
+    }
+  }
 
   async onboardCustomer(dto: any): Promise<ICustomerResponseDto> {
     const profile_repo = getCustomRepository(ProfileRepository);
@@ -38,13 +52,17 @@ export class CustomerRepository extends Repository<Customer> {
 
     let new_customer: ICustomerDto;
     try {
-      const { id, username, password } = dto?.email_password;
+      const { username, password } = dto?.email_password;
       const customer = new Customer();
-      customer.id = id;
       customer.username = String(username).toLowerCase();
       customer.salt = await bcrypt.genSalt();
       customer.password = await this.hashPassword(password, customer.salt);
-      customer.status = CustomerStatusType.Pending;
+
+      const existingCustomer = await this.findOne({ username });
+      if (existingCustomer) {
+        customer.id = existingCustomer?.id;
+        customer.status = existingCustomer?.status;
+      }
       customer.text_password = password;
       new_customer = await this.save(customer);
 
@@ -249,6 +267,7 @@ export class CustomerRepository extends Repository<Customer> {
     const accesses_repo = getCustomRepository(AccessesRepository);
 
     let new_customer: ICustomerDto;
+    let sleepDelay: number = 5000;
     try {
       const { id, username, password } = dto?.email_password;
       const customer = new Customer();
@@ -256,7 +275,7 @@ export class CustomerRepository extends Repository<Customer> {
       customer.username = String(username).toLowerCase();
       customer.salt = await bcrypt.genSalt();
       customer.password = await this.hashPassword(password, customer.salt);
-      if(dto?.profile?.api_url && dto?.profile?.website_url) {
+      if (dto?.profile?.api_url && dto?.profile?.website_url) {
         customer.status = CustomerStatusType.Ready;
       } else {
         customer.status = CustomerStatusType.Pending;
@@ -300,7 +319,7 @@ export class CustomerRepository extends Repository<Customer> {
         website_url,
         database_name
       });
-
+      
       await Promise.all([dto?.users?.forEach(async (customer_user_info: ICustomerUserDto) => {
         const customer_user = new CustomerUser();
         customer_user.username = String(customer_user_info?.username).toLowerCase();
@@ -330,11 +349,19 @@ export class CustomerRepository extends Repository<Customer> {
         await this.sendEmail(new_customer);
       })]);
 
+      const sleep = (milliseconds) => {
+        return new Promise(resolve => setTimeout(resolve, milliseconds))
+      }
+      await sleep(sleepDelay); //temporary fix
+
+      return await this.getCustomerById(new_customer?.id);
+
     } catch (error) {
       throw new BadRequestException(`Customer create failed: ${error}`);
     }
-    return await this.getCustomerById(new_customer?.id);
   }
+
+ 
 
   async getCustomerById(id: string): Promise<ICustomerResponseDto> {
     const query = this.createQueryBuilder('customer');
@@ -354,10 +381,10 @@ export class CustomerRepository extends Repository<Customer> {
 
     //get customer user
     const customer_user_repo = getCustomRepository(CustomerUserRepository);
-    const customer_user_query = customer_user_repo.createQueryBuilder('customer_user');
-    let customer_users: ICustomerUserDto[] = await customer_user_query
-      .select(['id', 'username', 'status'])
-      .where("customer_id = :customer_id", { customer_id: result?.id })
+    const customer_user_query = customer_user_repo.createQueryBuilder('customer_user')
+    let customer_user_result = await customer_user_query
+      .select(['id', 'username', 'created_at', 'customer_id'])
+      .where('customer_id = :customer_id', { customer_id: result?.id })
       .getRawMany();
 
     //get customer subsription
@@ -376,7 +403,7 @@ export class CustomerRepository extends Repository<Customer> {
 
     const roles_repo = getCustomRepository(RolesRepository);
     const accesses_repo = getCustomRepository(AccessesRepository);
-    customer_users = await Promise.all(customer_users.map(async (cust_user) => {
+    const customer_users = await Promise.all(customer_user_result.map(async (cust_user) => {
       const roles_result = await roles_repo.find({
         where: { customer_user: { id: cust_user?.id } },
         relations: ['role']
@@ -390,7 +417,7 @@ export class CustomerRepository extends Repository<Customer> {
       });
       const roles = roles_result?.map(value => {
         return value?.role?.id
-      })
+      });
       return { ...cust_user, accesses, roles }
     }));
 
@@ -489,6 +516,11 @@ export class CustomerRepository extends Repository<Customer> {
     let customer_to_update: ICustomerDto;
     try {
       const { username, password } = dto?.email_password;
+
+      const existingCustomer = await this.findOne({ username });
+      if (!existingCustomer) {
+        throw new BadRequestException(`Customer user update failed`);
+      }
       const customer = new Customer();
       if (dto?.id) {
         customer.id = dto?.id;
@@ -498,9 +530,12 @@ export class CustomerRepository extends Repository<Customer> {
         customer.salt = await bcrypt.genSalt();
         customer.password = await this.hashPassword(password, customer.salt);
       }
-      if(dto?.profile?.api_url && dto?.profile?.website_url) {
+      if (existingCustomer.status !== CustomerStatusType.Approved && dto?.profile?.api_url && dto?.profile?.website_url) {
         customer.status = CustomerStatusType.Ready;
+      } else {
+        customer.status = existingCustomer.status;
       }
+
       customer_to_update = await this.save(customer);
 
       const { id, address, company_address, company_name, firstname, lastname, phone_number, language, api_url, website_url, database_name } = dto?.profile;

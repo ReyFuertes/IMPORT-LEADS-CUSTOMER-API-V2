@@ -18,7 +18,7 @@ export enum CustomerStatusType {
 }
 export interface ICustomerResponseDto {
   created_at?: string;
-  customer_users: ICustomerUserDto[];
+  customer_users?: ICustomerUserDto[];
   id?: string;
   profile?: IProfileDto;
   status?: number;

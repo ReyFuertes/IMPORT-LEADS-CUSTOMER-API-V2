@@ -6,6 +6,11 @@ import { CustomerService } from './customer.service';
 export class CustomerController {
   constructor(private srv: CustomerService) { }
 
+  @Patch('reset-status')
+  resetStatus(@Body() dto: CustomerUpdateStatus): Promise<ICustomerDto> {
+    return this.srv.resetStatus(dto);
+  }
+
   @Post('onboard')
   onboardCustomer(@Body() dto: any, @Req() req: any): Promise<ICustomerResponseDto> {
     return this.srv.onboardCustomer(dto);

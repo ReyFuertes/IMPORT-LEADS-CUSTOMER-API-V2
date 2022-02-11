@@ -11,6 +11,10 @@ export class CustomerService extends BaseService<Customer> {
     super(repo);
   }
   
+  async resetStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
+    return await this.repo.resetStatus(dto);
+  }
+
   async onboardCustomer(dto: any): Promise<ICustomerResponseDto> {
     return this.repo.onboardCustomer(dto);
   }
