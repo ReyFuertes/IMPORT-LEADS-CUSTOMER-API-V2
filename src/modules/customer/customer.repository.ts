@@ -182,6 +182,7 @@ export class CustomerRepository extends Repository<Customer> {
   }
 
   async onInvite(dto: ICustomerDto[]): Promise<ICustomerDto[]> {
+    let response: any[] = [];
     let results = await Promise.all(dto?.map(async (row) => {
       const exist = await this.findOne({ username: row?.username });
       if (!exist) {
@@ -189,7 +190,7 @@ export class CustomerRepository extends Repository<Customer> {
         customer.username = row.username;
         customer.status = CustomerStatusType.Pending;
         const new_customer = await this.save(customer);
-        console.log('onInvite', row)
+
         const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
         await customer_subscription_repo.save({
           customer: new_customer,
@@ -267,7 +268,7 @@ export class CustomerRepository extends Repository<Customer> {
     const accesses_repo = getCustomRepository(AccessesRepository);
 
     let new_customer: ICustomerDto;
-    let sleepDelay: number = 5000;
+    let sleepDelay: number = 0;
     try {
       const { id, username, password } = dto?.email_password;
       const customer = new Customer();
@@ -319,8 +320,11 @@ export class CustomerRepository extends Repository<Customer> {
         website_url,
         database_name
       });
+
+      await this.sendEmail(new_customer);
       
       await Promise.all([dto?.users?.forEach(async (customer_user_info: ICustomerUserDto) => {
+        sleepDelay = sleepDelay + 1;
         const customer_user = new CustomerUser();
         customer_user.username = String(customer_user_info?.username).toLowerCase();
         customer_user.salt = await bcrypt.genSalt();
@@ -336,23 +340,24 @@ export class CustomerRepository extends Repository<Customer> {
           customer_user: new_customer_user,
         });
 
-        const access = customer_user_info?.accesses?.map(access => {
-          return { customer_user: new_customer_user, access }
+        const access = customer_user_info?.accesses?.map(id => {
+          return { customer_user: new_customer_user, access: { id } }
         });
         await accesses_repo.save(access);
 
-        const roles = customer_user_info?.roles?.map(role => {
-          return { customer_user: new_customer_user, role }
+        const roles = customer_user_info?.roles?.map(id => {
+          return { customer_user: new_customer_user, role: { id } }
         });
         await roles_repo.save(roles);
 
-        await this.sendEmail(new_customer);
+        await this.sendEmail(new_customer_user);
       })]);
 
       const sleep = (milliseconds) => {
         return new Promise(resolve => setTimeout(resolve, milliseconds))
       }
-      await sleep(sleepDelay); //temporary fix
+      sleepDelay = sleepDelay * 1000;
+      await sleep(sleepDelay);
 
       return await this.getCustomerById(new_customer?.id);
 
@@ -360,8 +365,6 @@ export class CustomerRepository extends Repository<Customer> {
       throw new BadRequestException(`Customer create failed: ${error}`);
     }
   }
-
- 
 
   async getCustomerById(id: string): Promise<ICustomerResponseDto> {
     const query = this.createQueryBuilder('customer');
@@ -512,8 +515,12 @@ export class CustomerRepository extends Repository<Customer> {
     const customer_user_repo = getCustomRepository(CustomerUserRepository);
     const roles_repo = getCustomRepository(RolesRepository);
     const accesses_repo = getCustomRepository(AccessesRepository);
-
+    const role_repo = getCustomRepository(RoleRepository);
+    const access_repo = getCustomRepository(AccessRepository);
+    
     let customer_to_update: ICustomerDto;
+    let sleepDelay: number = 0;
+
     try {
       const { username, password } = dto?.email_password;
 
@@ -535,8 +542,23 @@ export class CustomerRepository extends Repository<Customer> {
       } else {
         customer.status = existingCustomer.status;
       }
-
       customer_to_update = await this.save(customer);
+
+       //save admin role
+       const admin_role = await role_repo.findOne({ where: { role_name: 'admin' } });
+       if (admin_role) {
+         await roles_repo.save({ customer, role: admin_role });
+       } else {
+         throw new BadRequestException(`Customer failed: Admin role not set.`);
+       }
+       //save access
+       const access_query = access_repo.createQueryBuilder('access');
+       let customer_access_id_results: any[] = await access_query.select(['id']).getRawMany();
+       const accesses_payload = customer_access_id_results?.map(access => {
+         return { access, customer: { id: customer_to_update?.id } }
+       });
+
+       await accesses_repo.save(accesses_payload);
 
       const { id, address, company_address, company_name, firstname, lastname, phone_number, language, api_url, website_url, database_name } = dto?.profile;
       let profile: IProfileDto = {
@@ -560,6 +582,7 @@ export class CustomerRepository extends Repository<Customer> {
 
       try {
         await Promise.all([dto?.users?.forEach(async (customer_user_info: ICustomerUserDto) => {
+          sleepDelay = sleepDelay + 1;
           const customer_user = new CustomerUser();
           if (customer_user_info?.id) {
             customer_user.id = customer_user_info?.id;
@@ -615,6 +638,12 @@ export class CustomerRepository extends Repository<Customer> {
     } catch (error) {
       throw new BadRequestException(`Customer update failed: ${error}`);
     }
+
+    const sleep = (milliseconds) => {
+      return new Promise(resolve => setTimeout(resolve, milliseconds))
+    }
+    sleepDelay = sleepDelay * 1000;
+    await sleep(sleepDelay);
 
     return await this.getCustomerById(customer_to_update?.id);
   }
