@@ -182,7 +182,6 @@ export class CustomerRepository extends Repository<Customer> {
   }
 
   async onInvite(dto: ICustomerDto[]): Promise<ICustomerDto[]> {
-    let response: any[] = [];
     let results = await Promise.all(dto?.map(async (row) => {
       const exist = await this.findOne({ username: row?.username });
       if (!exist) {
@@ -369,7 +368,7 @@ export class CustomerRepository extends Repository<Customer> {
   async getCustomerById(id: string): Promise<ICustomerResponseDto> {
     const query = this.createQueryBuilder('customer');
     let result: ICustomerDto = await query
-      .select(['id', 'username', 'status', 'created_at'])
+      .select(['id', 'username', 'status', 'created_at', 'text_password'])
       .where("id = :id", { id: id })
       .orderBy('customer.created_at', 'DESC')
       .getRawOne();
