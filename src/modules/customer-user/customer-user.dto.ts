@@ -1,7 +1,6 @@
-import { RolesType, GetDto, ISimpleItem } from "src/models/generic.model";
-import { IAccessDto } from "../access/access.dto";
+import { GetDto} from "src/models/generic.model";
 import { ICustomerDto } from "../customer/customer.dto";
-import { IRolesDto } from "../roles/roles.dto";
+import { Profile } from "../profile/profile.entity";
 
 export interface ICustomerUserDto {
   id?: string;
@@ -11,8 +10,10 @@ export interface ICustomerUserDto {
   accesses?: any[];
   roles?: any[];
   customer?: ICustomerDto;
+  profile?: Profile;
   created_at?: string;
   status?: number;
+  is_submitted?: number;
 }
 export interface ICustomerUserResponseDto {
 

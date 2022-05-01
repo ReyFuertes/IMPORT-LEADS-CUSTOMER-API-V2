@@ -15,7 +15,6 @@ import { sqlOp } from 'src/models/generic.model';
 import { Profile } from '../profile/profile.entity';
 import { RoleRepository } from '../role/role.repository';
 import { AccessRepository } from '../access/access.repository';
-import { v4 as uuid } from 'uuid'
 import { validateEmail } from 'src/util/validate';
 import * as sgMail from '@sendgrid/mail';
 import { sendGridConfig } from '../config/sendgrid.config';
@@ -23,18 +22,54 @@ import { emailConfirmationSender, emailConfirmationSubject, emailConfirmationTem
 import { CustomerSubscriptionRepository } from '../customer-subscription/customer-subscription.repository';
 import { ICustomerSubscriptionDto } from '../customer-subscription/customer-subscription.dto';
 import { Subscription } from '../subscription/subscription.entity';
-import { debounceTime, delay } from 'rxjs';
 
 @EntityRepository(Customer)
 export class CustomerRepository extends Repository<Customer> {
 
+  async isApiUrlExist(dto: any): Promise<boolean> {
+    const profile_repo = getCustomRepository(ProfileRepository);
+    const profile_query = profile_repo.createQueryBuilder('profile');
+    let result_count = await profile_query
+      .select(['api_url'])
+      .leftJoinAndSelect('profile.customer', 'customer')
+      .where('api_url = :api_url', {
+        api_url: dto?.api_url?.trim()
+      })
+      .andWhere('customer_id != :customer_id', { customer_id: dto?.id?.trim() })
+      .getCount();
+
+    if (result_count > 0) {
+      return true;
+    }
+    return false;
+  }
+
+  async isWebsiteUrlExist(dto: any): Promise<boolean> {
+    const profile_repo = getCustomRepository(ProfileRepository);
+    const profile_query = profile_repo.createQueryBuilder('profile');
+    let result_count = await profile_query
+      .select(['website_url'])
+      .leftJoinAndSelect('profile.customer', 'customer')
+      .where('website_url = :website_url', {
+        website_url: dto?.website_url?.trim()
+      })
+      .andWhere('customer_id != :customer_id', { customer_id: dto?.id?.trim() })
+      .getCount();
+
+    if (result_count > 0) {
+      return true;
+    }
+    return false;
+  }
+
   async resetStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
     const exist = await this.findOne({ username: dto?.customer?.username });
+
     if (exist) {
       const updatedCustomer = await this.save({ ...exist, status: CustomerStatusType.Pending });
       return {
         id: updatedCustomer?.id,
-        status: updatedCustomer?.status,
+        status: Number(updatedCustomer?.status),
         username: updatedCustomer?.username
       };
     } else {
@@ -50,86 +85,166 @@ export class CustomerRepository extends Repository<Customer> {
     const access_repo = getCustomRepository(AccessRepository);
     const accesses_repo = getCustomRepository(AccessesRepository);
 
+    const isInvited = await this.isInvited(dto?.email_password?.id);
+    if (!isInvited) {
+      throw new BadRequestException('This user is not invited');
+    };
+
     let new_customer: ICustomerDto;
+    let sleepDelay: number = 0;
     try {
       const { username, password } = dto?.email_password;
       const customer = new Customer();
       customer.username = String(username).toLowerCase();
-      customer.salt = await bcrypt.genSalt();
-      customer.password = await this.hashPassword(password, customer.salt);
 
-      const existingCustomer = await this.findOne({ username });
-      if (existingCustomer) {
-        customer.id = existingCustomer?.id;
-        customer.status = existingCustomer?.status;
+      try {
+        if (password) {
+          customer.salt = await bcrypt.genSalt();
+          customer.password = await this.hashPassword(password, customer.salt);
+          customer.text_password = password;
+        }
+        const existingCustomer = await this.findOne({ username });
+        if (existingCustomer) {
+          customer.id = existingCustomer?.id;
+          customer.status = CustomerStatusType.Pending;
+        }
+        customer.is_submitted = 1;
+        new_customer = await this.save(customer);
+      } catch (error) {
+        throw new BadRequestException(`Customer failed: ${error}`);
       }
-      customer.text_password = password;
-      new_customer = await this.save(customer);
 
-      //set admin role
       const admin_role = await role_repo.findOne({ where: { role_name: 'admin' } });
       if (admin_role) {
         await roles_repo.save({ customer, role: admin_role });
       } else {
-        throw new BadRequestException(`Customer failed: Admin role not set.`);
+        throw new BadRequestException(`Customer role failed: Admin role not set.`);
       }
-      //set access
-      const access_query = access_repo.createQueryBuilder('access');
-      let customer_access_id_results: any[] = await access_query.select(['id']).getRawMany();
-      const accesses_payload = customer_access_id_results?.map(access => {
-        return { access, customer: { id: new_customer?.id } }
-      });
-      await accesses_repo.save(accesses_payload);
 
-      const { firstname, lastname, phone_number, address, company_name, company_address, language } = dto?.general_information;
-      await profile_repo.save({
-        address,
-        firstname,
-        lastname,
-        phone_number,
-        email: new_customer?.username,
-        customer: new_customer,
-        language,
-        company_name,
-        company_address
-      });
+      try {
+        const access_query = access_repo.createQueryBuilder('access');
+        let customer_access_id_results: any[] = await access_query.select(['id']).getRawMany();
+        const accesses_payload = customer_access_id_results?.map(access => {
+          return { access, customer: { id: new_customer?.id } }
+        });
+        await accesses_repo.save(accesses_payload);
+      } catch (error) {
+        throw new BadRequestException(`Customer access failed: ${error}`);
+      }
 
-      await Promise.all([dto?.user_information?.forEach(async (customer_user_info: any) => {
+      try {
+        const profile_exist = await profile_repo.findOne({ email: new_customer?.username });
+        let profile_payload = {
+          firstname: dto?.profile?.firstname,
+          lastname: dto?.profile?.lastname,
+          phone_number: dto?.profile?.phone_number,
+          email: new_customer?.username,
+          address: dto?.profile?.address,
+          language: dto?.profile?.language,
+          company_name: dto?.profile?.company_name,
+          company_address: dto?.profile?.company_address,
+        }
+        if (profile_exist) {
+          Object.assign(profile_payload, { id: profile_exist?.id });
+        } else {
+          Object.assign(profile_payload, { customer: { id: new_customer?.id } });
+        }
+
+        await profile_repo.save(profile_payload);
+      } catch (error) {
+        throw new BadRequestException(`Customer profile failed: ${error}`);
+      }
+
+      await Promise.all([dto?.users?.forEach(async (_customer_user: any) => {
+        sleepDelay = sleepDelay + 1;
+
         const customer_user = new CustomerUser();
-        customer_user.username = String(customer_user_info?.username).toLowerCase();
+        customer_user.username = String(_customer_user?.username).toLowerCase();
         customer_user.salt = await bcrypt.genSalt();
-        customer_user.password = await this.hashPassword(customer_user_info?.password, customer_user.salt);
-        customer_user.text_password = customer_user_info?.password;
-        const new_customer_user = await customer_user_repo.save({
-          ...customer_user,
-          customer: new_customer
-        });
-        /* profile */
-        await profile_repo.save({
-          email: customer_user_info?.username,
-          language,
-          customer_user: new_customer_user,
-        });
-        /* access */
-        const access = customer_user_info?.access?.map(access_id => {
-          return { customer_user: new_customer_user, access: { id: access_id } }
-        });
-        await accesses_repo.save(access);
-        /* roles */
-        const roles = customer_user_info?.roles?.map(role_id => {
-          return { customer_user: new_customer_user, role: { id: role_id } }
-        });
-        await roles_repo.save(roles);
+        customer_user.password = await this.hashPassword(_customer_user?.password, customer_user.salt);
+        customer_user.text_password = _customer_user?.password;
+
+        let new_customer_user: ICustomerUserDto;
+        try {
+          new_customer_user = await customer_user_repo.save({
+            ...customer_user,
+            customer: new_customer
+          });
+        } catch (error) {
+          throw new BadRequestException(`Customer profile failed: ${error}`);
+        }
+
+        try {
+          const profile_exist: IProfileDto = await profile_repo.findOne({
+            where: {
+              email: _customer_user?.profile?.username,
+              customer_user: { id: new_customer_user?.id }
+            },
+            relations: ['customer_user']
+          }) || {};
+          const profile_payload = Object.assign(profile_exist, {
+            firstname: _customer_user?.profile?.firstname,
+            lastname: _customer_user?.profile?.lastname,
+            email: _customer_user?.username,
+            language: dto?.profile?.language,
+            customer_user: new_customer_user,
+          });
+          await profile_repo.save(profile_payload);
+        } catch (error) {
+          throw new BadRequestException(`Customer user profile failed: ${error}`);
+        }
+
+        try {
+          const access = _customer_user?.access?.map(access_id => {
+            return { customer_user: new_customer_user, access: { id: access_id } }
+          });
+          if (access?.length > 0) {
+            await accesses_repo.save(access);
+          }
+        } catch (error) {
+          throw new BadRequestException(`Customer user access failed: ${error}`);
+        }
+
+        try {
+          const roles = _customer_user?.roles?.map(role_id => {
+            return { customer_user: new_customer_user, role: { id: role_id } }
+          });
+          if (roles?.length > 0) {
+            await roles_repo.save(roles);
+          }
+        } catch (error) {
+          throw new BadRequestException(`Customer user roles failed: ${error}`);
+        }
       })]);
 
+      const sleep = (milliseconds) => {
+        return new Promise(resolve => setTimeout(resolve, milliseconds))
+      }
+      sleepDelay = sleepDelay * 1000;
+      await sleep(sleepDelay);
+
+      return await this.getCustomerById(new_customer?.id);
+
     } catch (error) {
-      throw new BadRequestException(`Customer failed: ${error}`);
+      throw new BadRequestException(`Onboard customer failed: ${error}`);
     }
-    return await this.getCustomerById(new_customer?.id);
   }
 
-  async isInvited(id: string): Promise<ICustomerResponseDto> {
-    const exist = await this.findOne({ where: { id } });
+  async isInvited(id: string, isCustomer: boolean = true): Promise<ICustomerResponseDto> {
+    let exist: ICustomerDto | ICustomerUserDto;
+    let is_user_role: boolean = false;
+
+    exist = await this.findOne({ where: { id } });
+    if (!exist) {
+      const customer_user_repo = getCustomRepository(CustomerUserRepository);
+      exist = await customer_user_repo.findOne({ where: { id } });
+      isCustomer = false;
+      is_user_role = true;
+    } else {
+      isCustomer = true;
+      is_user_role = false;
+    }
+
     if (exist) {
       const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
       const customer_subscription = await customer_subscription_repo.findOne({
@@ -139,13 +254,17 @@ export class CustomerRepository extends Repository<Customer> {
         relations: ['customer', 'subscription']
       });
 
-      //get customer profile
       const profile_repo = getCustomRepository(ProfileRepository);
       const profile_query = profile_repo.createQueryBuilder('profile');
-      const profile_result: IProfileDto = await profile_query
-        .select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address', 'api_url', 'website_url', 'database_name'])
-        .where("customer_id = :customer_id", { customer_id: id })
-        .getRawOne();
+      profile_query.select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address', 'api_url', 'website_url', 'database_name']);
+
+      if (isCustomer) {
+        profile_query.where("customer_id = :customer_id", { customer_id: id })
+      } else {
+        profile_query.where("customer_user_id = :customer_user_id", { customer_user_id: id })
+      }
+
+      const profile_result: IProfileDto = await profile_query.getRawOne();
 
       const customer_user_repo = getCustomRepository(CustomerUserRepository);
       const customer_users_result = await customer_user_repo.find({
@@ -169,14 +288,22 @@ export class CustomerRepository extends Repository<Customer> {
           roles: roles_result?.map(row => row?.role?.id),
           access: access_result?.map(row => row?.access?.id)
         }
-      }))
-      return {
+      }));
+
+      let response = {
         id: exist?.id,
         username: exist?.username,
+        is_submitted: exist?.is_submitted,
         subscription: customer_subscription?.subscription?.id,
-        customer_users,
         profile: profile_result
       }
+      if (customer_users?.length > 0) {
+        Object.assign(response, { customer_users });
+      }
+      if (!customer_subscription && is_user_role && customer_users?.length === 0) {
+        Object.assign(response, { is_user: true });
+      }
+      return response;
     }
     throw new BadRequestException(`Customer is not invited.`);
   }
@@ -223,17 +350,17 @@ export class CustomerRepository extends Repository<Customer> {
   }
 
   async updateStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
-    const exist = await this.findOne({ username: dto?.customer?.username });
+    const customer_exist = await this.findOne({ id: dto?.customer?.id });
 
-    if (exist && exist?.status === CustomerStatusType.Ready) {
-      const updatedCustomer = await this.save({ ...exist, status: CustomerStatusType.Approved });
+    if (customer_exist && customer_exist?.status === CustomerStatusType.Ready) {
+      const updatedCustomer = await this.save({ ...customer_exist, status: CustomerStatusType.Approved });
       return {
         id: updatedCustomer?.id,
         status: updatedCustomer?.status,
         username: updatedCustomer?.username
       };
     } else {
-      throw new BadRequestException(`Update status failed ${exist}`);
+      throw new BadRequestException(`Update status failed ${customer_exist}`);
     }
   }
 
@@ -268,86 +395,150 @@ export class CustomerRepository extends Repository<Customer> {
 
     let new_customer: ICustomerDto;
     let sleepDelay: number = 0;
+    const { address, company_address, company_name, firstname, lastname, phone_number, language, api_url, website_url, database_name } = dto?.profile;
+
     try {
       const { id, username, password } = dto?.email_password;
       const customer = new Customer();
       if (id) customer.id = id;
+
       customer.username = String(username).toLowerCase();
-      customer.salt = await bcrypt.genSalt();
-      customer.password = await this.hashPassword(password, customer.salt);
-      if (dto?.profile?.api_url && dto?.profile?.website_url) {
+      if (password) {
+        customer.salt = await bcrypt.genSalt();
+        customer.password = await this.hashPassword(password, customer.salt);
+        customer.text_password = password;
+      }
+
+      if (api_url && website_url) {
         customer.status = CustomerStatusType.Ready;
       } else {
         customer.status = CustomerStatusType.Pending;
       }
-      new_customer = await this.save(customer);
 
-      //get customer subsription
-      const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
-      await customer_subscription_repo.save({
-        customer: new_customer,
-        subscription: { id: dto?.subscription }
-      });
-
-      //save admin role
-      const admin_role = await role_repo.findOne({ where: { role_name: 'admin' } });
-      if (admin_role) {
-        await roles_repo.save({ customer, role: admin_role });
-      } else {
-        throw new BadRequestException(`Customer failed: Admin role not set.`);
+      customer.is_submitted = 0;
+      try {
+        new_customer = await this.save(customer);
+      } catch (error) {
+        throw new BadRequestException(`Customer failed: ${error}`);
       }
-      //save access
-      const access_query = access_repo.createQueryBuilder('access');
-      let customer_access_id_results: any[] = await access_query.select(['id']).getRawMany();
-      const accesses_payload = customer_access_id_results?.map(access => {
-        return { access, customer: { id: new_customer?.id } }
-      });
-      await accesses_repo.save(accesses_payload);
 
-      const { address, company_address, company_name, firstname, lastname, phone_number, language, api_url, website_url, database_name } = dto?.profile;
-      await profile_repo.save({
-        address,
-        company_address,
-        company_name,
-        firstname,
-        lastname,
-        phone_number,
-        email: new_customer?.username,
-        customer: new_customer,
-        language,
-        api_url,
-        website_url,
-        database_name
-      });
+      try {
+        const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
+        await customer_subscription_repo.save({
+          customer: new_customer,
+          subscription: { id: dto?.subscription }
+        });
+      } catch (error) {
+        throw new BadRequestException(`Customer subscription failed: ${error}`);
+      }
 
-      await this.sendEmail(new_customer);
-      
-      await Promise.all([dto?.users?.forEach(async (customer_user_info: ICustomerUserDto) => {
+      try {
+        const admin_role = await role_repo.findOne({ where: { role_name: 'admin' } });
+        if (admin_role) {
+          await roles_repo.save({ customer, role: admin_role });
+        } else {
+          throw new BadRequestException(`Customer role failed: Admin role not set.`);
+        }
+      } catch (error) {
+        throw new BadRequestException(`Customer role failed: ${error}`);
+      }
+
+      try {
+        const access_query = access_repo.createQueryBuilder('access');
+        let customer_access_id_results: any[] = await access_query.select(['id']).getRawMany();
+        const accesses_payload = customer_access_id_results?.map(access => {
+          return { access, customer: { id: new_customer?.id } }
+        });
+        await accesses_repo.save(accesses_payload);
+      } catch (error) {
+        throw new BadRequestException(`Customer access failed: ${error}`);
+      }
+
+      try {
+        await profile_repo.save({
+          address,
+          company_address,
+          company_name,
+          firstname,
+          lastname,
+          phone_number,
+          email: new_customer?.username,
+          customer: new_customer,
+          language,
+          api_url,
+          website_url,
+          database_name
+        });
+      } catch (error) {
+        throw new BadRequestException(`Customer profile failed: ${error}`);
+      }
+
+      try {
+        await this.sendEmail(new_customer);
+      } catch (error) {
+        throw new BadRequestException(`Customer email failed: ${error}`);
+      }
+
+      await Promise.all([dto?.users?.forEach(async (_customer_user: ICustomerUserDto) => {
         sleepDelay = sleepDelay + 1;
         const customer_user = new CustomerUser();
-        customer_user.username = String(customer_user_info?.username).toLowerCase();
+        customer_user.username = String(_customer_user?.username).toLowerCase();
         customer_user.salt = await bcrypt.genSalt();
-        customer_user.password = await this.hashPassword(customer_user_info.password, customer_user.salt);
+        customer_user.password = await this.hashPassword(_customer_user.password, customer_user.salt);
+
         const new_customer_user = await customer_user_repo.save({
           ...customer_user,
-          customer: new_customer
+          customer: { id: new_customer?.id }
         });
 
-        await profile_repo.save({
-          email: customer_user_info?.username,
-          language,
-          customer_user: new_customer_user,
-        });
+        try {
+          const profile_exist = await profile_repo.find({
+            where: {
+              username: _customer_user?.username,
+              customer_user: { id: new_customer_user?.id }
+            }
+          });
+          if (!profile_exist) {
+            await profile_repo.save({
+              firstname: _customer_user?.profile?.firstname,
+              lastname: _customer_user?.profile?.lastname,
+              email: _customer_user?.username,
+              language,
+              website_url: website_url,
+              api_url: api_url,
+              company_name: company_name,
+              company_address: company_address,
+              database_name: database_name,
+              customer_user: new_customer_user,
+            });
+          } else {
+            throw new BadRequestException(`Customer user profile already exist`);
+          }
+        } catch (error) {
+          throw new BadRequestException(`Customer user profile failed: ${error}`);
+        }
 
-        const access = customer_user_info?.accesses?.map(id => {
-          return { customer_user: new_customer_user, access: { id } }
-        });
-        await accesses_repo.save(access);
+        try {
+          const access = _customer_user?.accesses?.map(id => {
+            return { customer_user: new_customer_user, access: { id } }
+          });
+          if (access?.length > 0) {
+            await accesses_repo.save(access);
+          }
+        } catch (error) {
+          throw new BadRequestException(`Customer user access failed: ${error}`);
+        }
 
-        const roles = customer_user_info?.roles?.map(id => {
-          return { customer_user: new_customer_user, role: { id } }
-        });
-        await roles_repo.save(roles);
+        try {
+          const roles = _customer_user?.roles?.map(id => {
+            return { customer_user: new_customer_user, role: { id } }
+          });
+          if (roles?.length > 0) {
+            await roles_repo.save(roles);
+          }
+        } catch (error) {
+          throw new BadRequestException(`Customer user roles failed: ${error}`);
+        }
 
         await this.sendEmail(new_customer_user);
       })]);
@@ -365,15 +556,14 @@ export class CustomerRepository extends Repository<Customer> {
     }
   }
 
-  async getCustomerById(id: string): Promise<ICustomerResponseDto> {
+  async getCustomerById(id: string, showTextPassword: boolean = true): Promise<ICustomerResponseDto> {
     const query = this.createQueryBuilder('customer');
     let result: ICustomerDto = await query
-      .select(['id', 'username', 'status', 'created_at', 'text_password'])
+      .select(['id', 'username', 'status', 'created_at', 'text_password', 'is_submitted'])
       .where("id = :id", { id: id })
       .orderBy('customer.created_at', 'DESC')
       .getRawOne();
 
-    //get customer profile
     const profile_repo = getCustomRepository(ProfileRepository);
     const profile_query = profile_repo.createQueryBuilder('profile');
     const profile: IProfileDto = await profile_query
@@ -381,7 +571,6 @@ export class CustomerRepository extends Repository<Customer> {
       .where("customer_id = :customer_id", { customer_id: result?.id })
       .getRawOne();
 
-    //get customer user
     const customer_user_repo = getCustomRepository(CustomerUserRepository);
     const customer_user_query = customer_user_repo.createQueryBuilder('customer_user')
     let customer_user_result = await customer_user_query
@@ -389,7 +578,6 @@ export class CustomerRepository extends Repository<Customer> {
       .where('customer_id = :customer_id', { customer_id: result?.id })
       .getRawMany();
 
-    //get customer subsription
     const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
     const customer_subscription_query = customer_subscription_repo.createQueryBuilder('customer_subscription');
     let customer_subscription_result: ICustomerSubscriptionDto = await customer_subscription_query
@@ -423,9 +611,19 @@ export class CustomerRepository extends Repository<Customer> {
       return { ...cust_user, accesses, roles }
     }));
 
-    return {
-      ...result, profile, customer_users, subscription: customer_subscription_result?.subscription
+    if (showTextPassword === false) {
+      delete result.text_password;
     }
+
+    let response = {
+      ...result,
+      profile,
+      subscription: customer_subscription_result?.subscription
+    }
+    if (customer_users?.length > 0) {
+      Object.assign(response, { customer_users })
+    }
+    return response;
   }
 
   async getCustomers(dto?: any): Promise<any[]> {
@@ -516,8 +714,9 @@ export class CustomerRepository extends Repository<Customer> {
     const accesses_repo = getCustomRepository(AccessesRepository);
     const role_repo = getCustomRepository(RoleRepository);
     const access_repo = getCustomRepository(AccessRepository);
-    
-    let customer_to_update: ICustomerDto;
+    const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
+
+    let updated_customer: ICustomerDto;
     let sleepDelay: number = 0;
 
     try {
@@ -525,117 +724,186 @@ export class CustomerRepository extends Repository<Customer> {
 
       const existingCustomer = await this.findOne({ username });
       if (!existingCustomer) {
-        throw new BadRequestException(`Customer user update failed`);
+        throw new BadRequestException(`Customer already exist.`);
       }
       const customer = new Customer();
-      if (dto?.id) {
-        customer.id = dto?.id;
-      }
-      customer.username = String(username).toLowerCase();
-      if (password) {
-        customer.salt = await bcrypt.genSalt();
-        customer.password = await this.hashPassword(password, customer.salt);
-      }
-      if (existingCustomer.status !== CustomerStatusType.Approved && dto?.profile?.api_url && dto?.profile?.website_url) {
-        customer.status = CustomerStatusType.Ready;
-      } else {
-        customer.status = existingCustomer.status;
-      }
-      customer_to_update = await this.save(customer);
+      let customer_subscription_exist: ICustomerSubscriptionDto;
 
-       //save admin role
-       const admin_role = await role_repo.findOne({ where: { role_name: 'admin' } });
-       if (admin_role) {
-         await roles_repo.save({ customer, role: admin_role });
-       } else {
-         throw new BadRequestException(`Customer failed: Admin role not set.`);
-       }
-       //save access
-       const access_query = access_repo.createQueryBuilder('access');
-       let customer_access_id_results: any[] = await access_query.select(['id']).getRawMany();
-       const accesses_payload = customer_access_id_results?.map(access => {
-         return { access, customer: { id: customer_to_update?.id } }
-       });
+      const { address, company_address, company_name, firstname, lastname, phone_number, language, api_url, website_url, database_name } = dto?.profile;
+      try {
+        if (dto?.id) {
+          customer.id = dto?.id;
+        }
+        customer.username = String(username).toLowerCase();
+        if (password) {
+          customer.salt = await bcrypt.genSalt();
+          customer.password = await this.hashPassword(password, customer.salt);
+          customer.text_password = password;
+        }
 
-       await accesses_repo.save(accesses_payload);
+        if (existingCustomer?.status !== CustomerStatusType.Approved && api_url && website_url) {
+          customer.status = CustomerStatusType.Ready;
+        } else {
+          customer.status = existingCustomer.status;
+        }
+        customer.is_submitted = 1;
+        if (customer) {
+          updated_customer = await this.save(customer);
+        }
 
-      const { id, address, company_address, company_name, firstname, lastname, phone_number, language, api_url, website_url, database_name } = dto?.profile;
-      let profile: IProfileDto = {
-        address,
-        company_address,
-        company_name,
-        firstname,
-        lastname,
-        phone_number,
-        email: customer_to_update?.username,
-        customer: customer_to_update,
-        language,
-        api_url,
-        website_url,
-        database_name,
+        customer_subscription_exist = await customer_subscription_repo.findOne({
+          where: { customer: { id: updated_customer?.id } }
+        });
+      } catch (error) {
+        throw new BadRequestException(`Customer update failed: ${error}`);
       }
-      if (id) {
-        profile.id = id;
-      }
-      await profile_repo.save(profile);
 
       try {
-        await Promise.all([dto?.users?.forEach(async (customer_user_info: ICustomerUserDto) => {
+        if (customer_subscription_exist && dto?.subscription) {
+          const customer_subscription_payload = Object.assign(customer_subscription_exist, {
+            customer: { id: dto?.id },
+            subscription: { id: dto?.subscription }
+          });
+          if (customer_subscription_payload) {
+            await customer_subscription_repo.save(customer_subscription_payload);
+          }
+        }
+      } catch (error) {
+        throw new BadRequestException(`Customer subscription failed: ${error}`);
+      }
+
+      try {
+        const admin_role = await role_repo.findOne({ where: { role_name: 'admin' } });
+        if (admin_role) {
+          await roles_repo.save({ customer, role: admin_role });
+        } else {
+          throw new BadRequestException(`Customer failed: Admin role not set.`);
+        }
+      } catch (error) {
+        throw new BadRequestException(`Customer role update failed: ${error}`);
+      }
+
+      try {
+        const access_query = access_repo.createQueryBuilder('access');
+        let customer_access_id_results: any[] = await access_query.select(['id']).getRawMany();
+        const accesses_payload = customer_access_id_results?.map(access => {
+          return { access, customer: { id: updated_customer?.id } }
+        });
+        await accesses_repo.save(accesses_payload);
+      } catch (error) {
+        throw new BadRequestException(`Customer access update failed: ${error}`);
+      }
+
+      try {
+        let customer_profile = await profile_repo.findOne({ email: username }) || {};
+        Object.assign(customer_profile, {
+          address,
+          company_address,
+          company_name,
+          firstname,
+          lastname,
+          phone_number,
+          email: updated_customer?.username,
+          customer: updated_customer,
+          language,
+          api_url,
+          website_url,
+          database_name,
+        });
+        await profile_repo.save(customer_profile);
+      } catch (error) {
+        throw new BadRequestException(`Customer profile failed: ${error}`);
+      }
+
+      try {
+        await Promise.all([dto?.users?.forEach(async (_customer_user: ICustomerUserDto) => {
           sleepDelay = sleepDelay + 1;
-          const customer_user = new CustomerUser();
-          if (customer_user_info?.id) {
-            customer_user.id = customer_user_info?.id;
-          }
-          customer_user.username = String(customer_user_info?.username).toLowerCase();
-          const updated_customer_user = await customer_user_repo.save({
-            ...customer_user,
-            customer: { id: customer_to_update?.id }
-          });
-
-          /* profile */
-          const customer_user_profile = await profile_repo.findOne({ customer_user: { id: updated_customer_user?.id } });
-          const updated_profile = {
-            ...customer_user_profile,
-            email: customer_user_info?.username,
-            language,
-            customer_user: updated_customer_user,
-          }
-          await profile_repo.save(updated_profile);
-
-          /* access */
-          const accesses_exist = await accesses_repo.find({
-            where: { customer_user: updated_customer_user }
-          });
-          if (accesses_exist?.length > 0) {
-            await accesses_repo.delete({ customer_user: updated_customer_user });
-          }
-          const access = customer_user_info?.accesses?.map(access => {
-            return { customer_user: updated_customer_user, access }
-          });
-          if (access) {
-            await accesses_repo.save(access);
+          if (!_customer_user?.id) {
+            delete _customer_user.id;
           }
 
-          /* roles */
-          const roles_exist = await roles_repo.find({
-            where: { customer_user: updated_customer_user }
-          });
-          if (roles_exist?.length > 0) {
-            await roles_repo.delete({ customer_user: updated_customer_user });
+          let updated_customer_user: ICustomerUserDto;
+          try {
+            let customer_user = await customer_user_repo.findOne({
+              where: { id: _customer_user?.id }
+            }) || {};
+            Object.assign(customer_user, {
+              ..._customer_user,
+              username: String(_customer_user?.username).toLowerCase(),
+              customer: { id: updated_customer?.id }
+            });
+            updated_customer_user = await customer_user_repo.save(customer_user);
+          } catch (error) {
+            throw new BadRequestException(`Customer user failed: ${error}`);
           }
-          const roles = customer_user_info?.roles?.map(role => {
-            return { customer_user: updated_customer_user, role }
-          });
-          if (roles) {
-            await roles_repo.save(roles);
+
+          try {
+            let profile: IProfileDto = await profile_repo.findOne({
+              where: {
+                email: _customer_user?.username,
+                customer_user: { id: updated_customer_user?.id }
+              },
+              relations: ['customer_user']
+            }) || {};
+            Object.assign(profile, {
+              email: _customer_user?.username,
+              website_url,
+              api_url,
+              company_name,
+              company_address,
+              language,
+              database_name
+            });
+            await profile_repo.save(profile);
+          } catch (error) {
+            throw new BadRequestException(`Customer user profile failed: ${error}`);
           }
+
+          try {
+            await Promise.all([_customer_user?.accesses.forEach(async (id) => {
+              let access_exist = await accesses_repo.findOne({
+                where: {
+                  customer_user: { id: updated_customer?.id },
+                  access: { id }
+                },
+                relations: ['access']
+              }) || {};
+              Object.assign(access_exist, { 
+                access: { id }, 
+                customer_user: { id: updated_customer_user?.id } 
+              });
+              await accesses_repo.save(access_exist);
+            })]);
+          } catch (error) {
+            throw new BadRequestException(`Customer user access failed: ${error}`);
+          }
+
+          try {
+            await Promise.all([_customer_user?.roles.forEach(async (id) => {
+              const role_exist = await roles_repo.findOne({
+                where: {
+                  customer_user: { id: updated_customer?.id },
+                  role: { id }
+                },
+                relations: ['role']
+              }) || {};
+              Object.assign(role_exist, { 
+                role: { id }, 
+                customer_user: { id: updated_customer_user?.id } 
+              });
+              await roles_repo.save(role_exist);
+            })]);
+          } catch (error) {
+            throw new BadRequestException(`Customer user roles failed: ${error}`);
+          }
+
         })]);
       } catch (error) {
-        throw new BadRequestException(`Customer user update failed: ${error}`);
+        throw new BadRequestException(`Customer user update failed: Inner ${error}`);
       }
 
     } catch (error) {
-      throw new BadRequestException(`Customer update failed: ${error}`);
+      throw new BadRequestException(`Customer update failed: Outer ${error}`);
     }
 
     const sleep = (milliseconds) => {
@@ -644,7 +912,7 @@ export class CustomerRepository extends Repository<Customer> {
     sleepDelay = sleepDelay * 1000;
     await sleep(sleepDelay);
 
-    return await this.getCustomerById(customer_to_update?.id);
+    return await this.getCustomerById(updated_customer?.id);
   }
 
   async getRolessByCustomerId(customer_id: string): Promise<any[]> {

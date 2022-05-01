@@ -1,10 +1,9 @@
 import { IProfileDto } from "src/modules/profile/profile.dto";
-import { RolesType, GetDto } from "src/models/generic.model";
+import { GetDto } from "src/models/generic.model";
 import { IAccessesDto } from "src/modules/accesses/accesses.dto";
 import { IRolesDto } from "src/modules/roles/roles.dto";
 import { ICustomerUserDto } from "../customer-user/customer-user.dto";
 import { ISubscriptionDto } from "../subscription/subscription.dto";
-import { IUserDto } from "../user/user.dto";
 
 export interface CustomerUpdateStatus {
   customer: ICustomerDto;
@@ -34,9 +33,9 @@ export interface ICustomerPayload {
     username: string;
     password: string;
   },
-  profile?: IProfileDto,
+  profile?: IProfileDto;
   subscription: string;
-  users?: any[];
+  users?: ICustomerUserDto[];
 }
 export interface ICustomerDto {
   id?: string;
@@ -53,6 +52,7 @@ export interface ICustomerDto {
   create_status?: CustomerCreateStatusType;
   subscription?: string;
   text_password?: string;
+  is_submitted?: number;
 }
 export enum CustomerCreateStatusType {
   success = 'Success',

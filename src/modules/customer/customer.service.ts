@@ -11,6 +11,14 @@ export class CustomerService extends BaseService<Customer> {
     super(repo);
   }
   
+  async isApiUrlExist(dto: any): Promise<boolean> {
+    return await this.repo.isApiUrlExist(dto);
+  }
+
+  async isWebsiteUrlExist(dto: any): Promise<boolean> {
+    return await this.repo.isWebsiteUrlExist(dto);
+  }
+  
   async resetStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
     return await this.repo.resetStatus(dto);
   }

@@ -6,7 +6,6 @@ import { Roles } from '../roles/roles.entity';
 import { Customer } from "../customer/customer.entity";
 
 @Entity({ synchronize: false })
-@Unique(['username'])
 export class CustomerUser extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')
@@ -39,12 +38,15 @@ export class CustomerUser extends BaseEntity {
     { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   profile: Profile;
 
+  @Column({ nullable: false, default: 0 })
+  is_submitted: number;
+
   @OneToMany(() => Accesses, c => c.customer_user,
-    { nullable: true, onDelete: 'CASCADE' })
+    { nullable: true })
   accesses: Accesses[];
 
   @OneToMany(() => Roles, c => c.customer_user,
-    { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
+    { nullable: true })
   roles: Roles[];
 
   async validatePassword(password: string): Promise<boolean> {

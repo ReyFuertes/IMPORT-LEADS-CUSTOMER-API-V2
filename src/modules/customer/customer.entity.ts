@@ -29,24 +29,25 @@ export class Customer extends BaseEntity {
   @Column({ nullable: false, default: 0 })
   status: number;
 
+  @Column({ nullable: false, default: 0 })
+  is_submitted: number;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: string;
 
-  @OneToOne(() => Profile, c => c.customer,
-    { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
+  @OneToOne(() => Profile, c => c.customer)
   profile: Profile;
 
-  @OneToMany(() => CustomerSubscription, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
+  @OneToMany(() => CustomerSubscription, c => c.customer)
   customer_subscription: CustomerSubscription;
 
-  @OneToMany(() => CustomerUser, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE', eager: true })
+  @OneToMany(() => CustomerUser, c => c.customer)
   customer_user: CustomerUser;
 
-  @OneToMany(() => Migrate, c => c.customer, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
+  @OneToMany(() => Migrate, c => c.customer)
   migrate: Migrate;
 
-  @OneToMany(() => Roles, c => c.customer,
-    { nullable: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
+  @OneToMany(() => Roles, c => c.customer)
   roles: Roles[];
 
   @OneToMany(() => Accesses, c => c.customer,

@@ -2,13 +2,9 @@ import { Repository, EntityRepository, getCustomRepository } from 'typeorm';
 import * as _ from 'lodash';
 import { CustomerUser } from './customer-user.entity';
 import * as bcrypt from 'bcrypt';
-import { BadRequestException, HttpCode, HttpStatus, Res } from '@nestjs/common';
 import { AccessesRepository } from '../accesses/accesses.repository';
 import { RolesRepository } from '../roles/roles.repository';
-import { Customer } from '../customer/customer.entity';
-import { Profile } from '../profile/profile.entity';
 import { ProfileRepository } from '../profile/profile.repository';
-import { Response } from 'express';
 import { ICustomerUserDto, ICustomerUserResponseDto } from './customer-user.dto';
 import { IProfileDto } from '../profile/profile.dto';
 

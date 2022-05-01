@@ -1,4 +1,3 @@
-import { sqlOp } from 'src/models/generic.model';
 import { Repository, EntityRepository } from 'typeorm';
 import * as _ from 'lodash';
 import { CustomerSubscription } from './customer-subscription.entity';

@@ -1,4 +1,5 @@
 import { ICustomerDto } from "src/modules/customer/customer.dto";
+import { ICustomerUserDto } from "../customer-user/customer-user.dto";
 
 export interface IProfileDto {
   id?: string;
@@ -18,6 +19,7 @@ export interface IProfileDto {
   position?: string;
   image?: string;
   customer?: ICustomerDto;
+  customer_user?: ICustomerUserDto;
   address?: string;
   phone_number?: string;
   language?: string;
