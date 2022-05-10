@@ -7,6 +7,12 @@ import { CustomerUserService } from './customer-user.service';
 export class CustomerUserController {
   constructor(private srv: CustomerUserService) { }
 
+  @Patch()
+  @UseGuards(AuthGuard('jwt'))
+  update(@Body() dto: ICustomerUserDto): Promise<ICustomerUserDto> {
+    return this.srv.updateCustomerUser(dto);
+  }
+
   @Delete('/:id')
   delete(@Param('id') id: string): Promise<ICustomerUserDto> {
     return this.srv.deleteById(id);

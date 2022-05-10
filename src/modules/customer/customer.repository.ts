@@ -400,7 +400,11 @@ export class CustomerRepository extends Repository<Customer> {
     try {
       const { id, username, password } = dto?.email_password;
       const customer = new Customer();
-      if (id) customer.id = id;
+      if (id) {
+        customer.id = id;
+      } else {
+        delete customer.id;
+      }
 
       customer.username = String(username).toLowerCase();
       if (password) {
@@ -492,11 +496,12 @@ export class CustomerRepository extends Repository<Customer> {
         });
 
         try {
-          const profile_exist = await profile_repo.find({
+          const profile_exist = await profile_repo.findOne({
             where: {
-              username: _customer_user?.username,
+              email: _customer_user?.username,
               customer_user: { id: new_customer_user?.id }
-            }
+            },
+            relations: ['customer_user']
           });
           if (!profile_exist) {
             await profile_repo.save({
@@ -519,23 +524,39 @@ export class CustomerRepository extends Repository<Customer> {
         }
 
         try {
-          const access = _customer_user?.accesses?.map(id => {
-            return { customer_user: new_customer_user, access: { id } }
-          });
-          if (access?.length > 0) {
-            await accesses_repo.save(access);
-          }
+          await Promise.all([_customer_user?.accesses.forEach(async (id) => {
+            let access_exist = await accesses_repo.findOne({
+              where: {
+                customer_user: { id: new_customer_user?.id },
+                access: { id }
+              },
+              relations: ['access']
+            }) || {};
+            Object.assign(access_exist, {
+              access: { id },
+              customer_user: { id: new_customer_user?.id }
+            });
+            await accesses_repo.save(access_exist);
+          })]);
         } catch (error) {
           throw new BadRequestException(`Customer user access failed: ${error}`);
         }
 
         try {
-          const roles = _customer_user?.roles?.map(id => {
-            return { customer_user: new_customer_user, role: { id } }
-          });
-          if (roles?.length > 0) {
-            await roles_repo.save(roles);
-          }
+          await Promise.all([_customer_user?.roles.forEach(async (id) => {
+            const role_exist = await roles_repo.findOne({
+              where: {
+                customer_user: { id: new_customer_user?.id },
+                role: { id }
+              },
+              relations: ['role']
+            }) || {};
+            Object.assign(role_exist, {
+              role: { id },
+              customer_user: { id: new_customer_user?.id }
+            });
+            await roles_repo.save(role_exist);
+          })]);
         } catch (error) {
           throw new BadRequestException(`Customer user roles failed: ${error}`);
         }
@@ -549,7 +570,8 @@ export class CustomerRepository extends Repository<Customer> {
       sleepDelay = sleepDelay * 1000;
       await sleep(sleepDelay);
 
-      return await this.getCustomerById(new_customer?.id);
+      const response = await this.getCustomerById(new_customer?.id);
+      return response;
 
     } catch (error) {
       throw new BadRequestException(`Customer create failed: ${error}`);
@@ -558,72 +580,76 @@ export class CustomerRepository extends Repository<Customer> {
 
   async getCustomerById(id: string, showTextPassword: boolean = true): Promise<ICustomerResponseDto> {
     const query = this.createQueryBuilder('customer');
-    let result: ICustomerDto = await query
-      .select(['id', 'username', 'status', 'created_at', 'text_password', 'is_submitted'])
-      .where("id = :id", { id: id })
-      .orderBy('customer.created_at', 'DESC')
-      .getRawOne();
+    try {
+      let result: ICustomerDto = await query
+        .select(['id', 'username', 'status', 'created_at', 'text_password', 'is_submitted'])
+        .where("id = :id", { id: id })
+        .orderBy('customer.created_at', 'DESC')
+        .getRawOne();
 
-    const profile_repo = getCustomRepository(ProfileRepository);
-    const profile_query = profile_repo.createQueryBuilder('profile');
-    const profile: IProfileDto = await profile_query
-      .select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address', 'api_url', 'website_url', 'database_name'])
-      .where("customer_id = :customer_id", { customer_id: result?.id })
-      .getRawOne();
+      const profile_repo = getCustomRepository(ProfileRepository);
+      const profile_query = profile_repo.createQueryBuilder('profile');
+      const profile: IProfileDto = await profile_query
+        .select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address', 'api_url', 'website_url', 'database_name'])
+        .where("customer_id = :customer_id", { customer_id: result?.id })
+        .getRawOne();
 
-    const customer_user_repo = getCustomRepository(CustomerUserRepository);
-    const customer_user_query = customer_user_repo.createQueryBuilder('customer_user')
-    let customer_user_result = await customer_user_query
-      .select(['id', 'username', 'created_at', 'customer_id'])
-      .where('customer_id = :customer_id', { customer_id: result?.id })
-      .getRawMany();
+      const customer_user_repo = getCustomRepository(CustomerUserRepository);
+      const customer_user_query = customer_user_repo.createQueryBuilder('customer_user')
+      let customer_user_result = await customer_user_query
+        .select(['id', 'username', 'created_at', 'customer_id'])
+        .where('customer_id = :customer_id', { customer_id: result?.id })
+        .getRawMany();
 
-    const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
-    const customer_subscription_query = customer_subscription_repo.createQueryBuilder('customer_subscription');
-    let customer_subscription_result: ICustomerSubscriptionDto = await customer_subscription_query
-      .select(['customer_subscription.id', 'subscription.id', 'subscription.name', 'subscription.rate', 'subscription.description'])
-      .innerJoinAndMapOne(
-        "customer_subscription.subscription",
-        Subscription,
-        "subscription",
-        "subscription.id = customer_subscription.subscription_id"
-      )
-      .where("customer_id = :customer_id", { customer_id: result?.id })
-      .getOne();
+      const customer_subscription_repo = getCustomRepository(CustomerSubscriptionRepository);
+      const customer_subscription_query = customer_subscription_repo.createQueryBuilder('customer_subscription');
+      let customer_subscription_result: ICustomerSubscriptionDto = await customer_subscription_query
+        .select(['customer_subscription.id', 'subscription.id', 'subscription.name', 'subscription.rate', 'subscription.description'])
+        .innerJoinAndMapOne(
+          "customer_subscription.subscription",
+          Subscription,
+          "subscription",
+          "subscription.id = customer_subscription.subscription_id"
+        )
+        .where("customer_id = :customer_id", { customer_id: result?.id })
+        .getOne();
 
-    const roles_repo = getCustomRepository(RolesRepository);
-    const accesses_repo = getCustomRepository(AccessesRepository);
-    const customer_users = await Promise.all(customer_user_result.map(async (cust_user) => {
-      const roles_result = await roles_repo.find({
-        where: { customer_user: { id: cust_user?.id } },
-        relations: ['role']
-      });
-      const accesses_result = await accesses_repo.find({
-        where: { customer_user: { id: cust_user?.id } },
-        relations: ['access']
-      });
-      const accesses = accesses_result.map(value => {
-        return value?.access.id
-      });
-      const roles = roles_result?.map(value => {
-        return value?.role?.id
-      });
-      return { ...cust_user, accesses, roles }
-    }));
+      const roles_repo = getCustomRepository(RolesRepository);
+      const accesses_repo = getCustomRepository(AccessesRepository);
+      const customer_users = await Promise.all(customer_user_result.map(async (cust_user) => {
+        const roles_result = await roles_repo.find({
+          where: { customer_user: { id: cust_user?.id } },
+          relations: ['role']
+        });
+        const accesses_result = await accesses_repo.find({
+          where: { customer_user: { id: cust_user?.id } },
+          relations: ['access']
+        });
+        const accesses = accesses_result.map(value => {
+          return value?.access.id
+        });
+        const roles = roles_result?.map(value => {
+          return value?.role?.id
+        });
+        return { ...cust_user, accesses, roles }
+      }));
 
-    if (showTextPassword === false) {
-      delete result.text_password;
+      if (showTextPassword === false) {
+        delete result.text_password;
+      }
+
+      let response = {
+        ...result,
+        profile,
+        subscription: customer_subscription_result?.subscription
+      }
+      if (customer_users?.length > 0) {
+        Object.assign(response, { customer_users })
+      }
+      return response;
+    } catch (error) {
+      throw new BadRequestException(`getCustomerById failed: ${error}`);
     }
-
-    let response = {
-      ...result,
-      profile,
-      subscription: customer_subscription_result?.subscription
-    }
-    if (customer_users?.length > 0) {
-      Object.assign(response, { customer_users })
-    }
-    return response;
   }
 
   async getCustomers(dto?: any): Promise<any[]> {
@@ -722,9 +748,9 @@ export class CustomerRepository extends Repository<Customer> {
     try {
       const { username, password } = dto?.email_password;
 
-      const existingCustomer = await this.findOne({ username });
+      const existingCustomer = await this.findOne({ id: dto?.id });
       if (!existingCustomer) {
-        throw new BadRequestException(`Customer already exist.`);
+        throw new BadRequestException(`Customer doesnt exist.`);
       }
       const customer = new Customer();
       let customer_subscription_exist: ICustomerSubscriptionDto;
@@ -795,7 +821,14 @@ export class CustomerRepository extends Repository<Customer> {
       }
 
       try {
-        let customer_profile = await profile_repo.findOne({ email: username }) || {};
+        let customer_profile = await profile_repo.findOne({
+          where: {
+            customer: {
+              username: existingCustomer?.username
+            }
+          },
+          relations: ['customer']
+        }) || {};
         Object.assign(customer_profile, {
           address,
           company_address,
@@ -810,6 +843,7 @@ export class CustomerRepository extends Repository<Customer> {
           website_url,
           database_name,
         });
+
         await profile_repo.save(customer_profile);
       } catch (error) {
         throw new BadRequestException(`Customer profile failed: ${error}`);
@@ -868,9 +902,9 @@ export class CustomerRepository extends Repository<Customer> {
                 },
                 relations: ['access']
               }) || {};
-              Object.assign(access_exist, { 
-                access: { id }, 
-                customer_user: { id: updated_customer_user?.id } 
+              Object.assign(access_exist, {
+                access: { id },
+                customer_user: { id: updated_customer_user?.id }
               });
               await accesses_repo.save(access_exist);
             })]);
@@ -887,9 +921,9 @@ export class CustomerRepository extends Repository<Customer> {
                 },
                 relations: ['role']
               }) || {};
-              Object.assign(role_exist, { 
-                role: { id }, 
-                customer_user: { id: updated_customer_user?.id } 
+              Object.assign(role_exist, {
+                role: { id },
+                customer_user: { id: updated_customer_user?.id }
               });
               await roles_repo.save(role_exist);
             })]);

@@ -11,6 +11,10 @@ export class CustomerUserService extends BaseService<CustomerUser> {
     super(repo);
   }
 
+  async updateCustomerUser(dto: ICustomerUserDto): Promise<ICustomerUserDto> {
+    return this.repo.updateCustomerUser(dto);
+  }
+
   async deleteById(id: string): Promise<ICustomerUserDto> {
     return await this.repo.deleteById(id);
   }
