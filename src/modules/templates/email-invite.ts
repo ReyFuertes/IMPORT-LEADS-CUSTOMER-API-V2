@@ -6,7 +6,7 @@ export const emailConfirmationFooterText = () => {
 }
 
 export const emailConfirmationText = () => {
-  return `We're happy to invite you to Import Leads. Fill out basic information and start exploring.`;
+  return `We're happy to invite you to IAAD Platform. Fill out basic information and start exploring.`;
 }
 
 export const emailConfirmationSender = () => {
@@ -14,7 +14,7 @@ export const emailConfirmationSender = () => {
 }
 
 export const emailConfirmationSubject = () => {
-  return `IAAD Platform Fillout Information`;
+  return `IAAD Platform invited you to fillout information`;
 }
 
 export const emailConfirmationTemplate = (user: IUserDto) => `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">

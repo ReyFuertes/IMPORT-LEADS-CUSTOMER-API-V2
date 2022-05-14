@@ -22,11 +22,13 @@ import { emailConfirmationSender, emailConfirmationSubject, emailConfirmationTem
 import { CustomerSubscriptionRepository } from '../customer-subscription/customer-subscription.repository';
 import { ICustomerSubscriptionDto } from '../customer-subscription/customer-subscription.dto';
 import { Subscription } from '../subscription/subscription.entity';
+import { crypt, decrypt } from 'src/util/crypt';
+import { encryptKey } from 'src/helpers/constant';
 
 @EntityRepository(Customer)
 export class CustomerRepository extends Repository<Customer> {
 
-  async isApiUrlExist(dto: any): Promise<boolean> {
+  public async isApiUrlExist(dto: any): Promise<boolean> {
     const profile_repo = getCustomRepository(ProfileRepository);
     const profile_query = profile_repo.createQueryBuilder('profile');
     let result_count = await profile_query
@@ -44,7 +46,7 @@ export class CustomerRepository extends Repository<Customer> {
     return false;
   }
 
-  async isWebsiteUrlExist(dto: any): Promise<boolean> {
+  public async isWebsiteUrlExist(dto: any): Promise<boolean> {
     const profile_repo = getCustomRepository(ProfileRepository);
     const profile_query = profile_repo.createQueryBuilder('profile');
     let result_count = await profile_query
@@ -62,7 +64,7 @@ export class CustomerRepository extends Repository<Customer> {
     return false;
   }
 
-  async resetStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
+  public async resetStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
     const exist = await this.findOne({ username: dto?.customer?.username });
 
     if (exist) {
@@ -77,7 +79,7 @@ export class CustomerRepository extends Repository<Customer> {
     }
   }
 
-  async onboardCustomer(dto: any): Promise<ICustomerResponseDto> {
+  public async onboardCustomer(dto: any): Promise<ICustomerResponseDto> {
     const profile_repo = getCustomRepository(ProfileRepository);
     const customer_user_repo = getCustomRepository(CustomerUserRepository);
     const role_repo = getCustomRepository(RoleRepository);
@@ -137,7 +139,7 @@ export class CustomerRepository extends Repository<Customer> {
         let profile_payload = {
           firstname: dto?.profile?.firstname,
           lastname: dto?.profile?.lastname,
-          phone_number: dto?.profile?.phone_number,
+          phone: dto?.profile?.phone,
           email: new_customer?.username,
           address: dto?.profile?.address,
           language: dto?.profile?.language,
@@ -230,7 +232,7 @@ export class CustomerRepository extends Repository<Customer> {
     }
   }
 
-  async isInvited(id: string, isCustomer: boolean = true): Promise<ICustomerResponseDto> {
+  public async isInvited(id: string, isCustomer: boolean = true): Promise<ICustomerResponseDto> {
     let exist: ICustomerDto | ICustomerUserDto;
     let is_user_role: boolean = false;
 
@@ -256,7 +258,7 @@ export class CustomerRepository extends Repository<Customer> {
 
       const profile_repo = getCustomRepository(ProfileRepository);
       const profile_query = profile_repo.createQueryBuilder('profile');
-      profile_query.select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address', 'api_url', 'website_url', 'database_name']);
+      profile_query.select(['id', 'firstname', 'lastname', 'language', 'phone', 'company_name', 'company_address', 'address', 'api_url', 'website_url', 'database_name']);
 
       if (isCustomer) {
         profile_query.where("customer_id = :customer_id", { customer_id: id })
@@ -308,7 +310,7 @@ export class CustomerRepository extends Repository<Customer> {
     throw new BadRequestException(`Customer is not invited.`);
   }
 
-  async onInvite(dto: ICustomerDto[]): Promise<ICustomerDto[]> {
+  public async onInvite(dto: ICustomerDto[]): Promise<ICustomerDto[]> {
     let results = await Promise.all(dto?.map(async (row) => {
       const exist = await this.findOne({ username: row?.username });
       if (!exist) {
@@ -349,11 +351,12 @@ export class CustomerRepository extends Repository<Customer> {
     return results;
   }
 
-  async updateStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
+  public async updateStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
     const customer_exist = await this.findOne({ id: dto?.customer?.id });
 
     if (customer_exist && customer_exist?.status === CustomerStatusType.Ready) {
       const updatedCustomer = await this.save({ ...customer_exist, status: CustomerStatusType.Approved });
+
       return {
         id: updatedCustomer?.id,
         status: updatedCustomer?.status,
@@ -364,7 +367,7 @@ export class CustomerRepository extends Repository<Customer> {
     }
   }
 
-  async deleteById(id: string): Promise<ICustomerDto> {
+  public async deleteById(id: string): Promise<ICustomerDto> {
     const exist = await this.findOne({ id });
     if (exist) {
       this.createQueryBuilder()
@@ -381,11 +384,11 @@ export class CustomerRepository extends Repository<Customer> {
     return null;
   }
 
-  async hashPassword(password: string, salt: string) {
+  public async hashPassword(password: string, salt: string) {
     return bcrypt.hash(password, salt);
   }
 
-  async createCustomer(dto: ICustomerPayload): Promise<ICustomerResponseDto> {
+  public async createCustomer(dto: ICustomerPayload): Promise<ICustomerResponseDto> {
     const profile_repo = getCustomRepository(ProfileRepository);
     const customer_user_repo = getCustomRepository(CustomerUserRepository);
     const role_repo = getCustomRepository(RoleRepository);
@@ -395,7 +398,7 @@ export class CustomerRepository extends Repository<Customer> {
 
     let new_customer: ICustomerDto;
     let sleepDelay: number = 0;
-    const { address, company_address, company_name, firstname, lastname, phone_number, language, api_url, website_url, database_name } = dto?.profile;
+    const { address, company_address, company_name, firstname, lastname, phone, language, api_url, website_url, database_name } = dto?.profile;
 
     try {
       const { id, username, password } = dto?.email_password;
@@ -408,9 +411,12 @@ export class CustomerRepository extends Repository<Customer> {
 
       customer.username = String(username).toLowerCase();
       if (password) {
-        customer.salt = await bcrypt.genSalt();
-        customer.password = await this.hashPassword(password, customer.salt);
-        customer.text_password = password;
+        const salt = await bcrypt.genSalt();
+        const encrypted_password = crypt(encryptKey(), password);
+        const hash_password = await this.hashPassword(encrypted_password, customer.salt);
+        customer.salt = salt;
+        customer.password = hash_password;
+        customer.text_password = encrypted_password;
       }
 
       if (api_url && website_url) {
@@ -465,7 +471,7 @@ export class CustomerRepository extends Repository<Customer> {
           company_name,
           firstname,
           lastname,
-          phone_number,
+          phone,
           email: new_customer?.username,
           customer: new_customer,
           language,
@@ -578,7 +584,7 @@ export class CustomerRepository extends Repository<Customer> {
     }
   }
 
-  async getCustomerById(id: string, showTextPassword: boolean = true): Promise<ICustomerResponseDto> {
+  public async getCustomerById(id: string, showTextPassword: boolean = true): Promise<ICustomerResponseDto> {
     const query = this.createQueryBuilder('customer');
     try {
       let result: ICustomerDto = await query
@@ -590,7 +596,7 @@ export class CustomerRepository extends Repository<Customer> {
       const profile_repo = getCustomRepository(ProfileRepository);
       const profile_query = profile_repo.createQueryBuilder('profile');
       const profile: IProfileDto = await profile_query
-        .select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address', 'api_url', 'website_url', 'database_name'])
+        .select(['id', 'firstname', 'lastname', 'language', 'phone', 'company_name', 'company_address', 'address', 'api_url', 'website_url', 'database_name'])
         .where("customer_id = :customer_id", { customer_id: result?.id })
         .getRawOne();
 
@@ -652,9 +658,9 @@ export class CustomerRepository extends Repository<Customer> {
     }
   }
 
-  async getCustomers(dto?: any): Promise<any[]> {
+  public async getCustomers(dto?: any): Promise<any[]> {
     const query = this.createQueryBuilder('customer')
-      .select(['customer.id', 'customer.username', 'customer.status', 'customer.created_at'])
+      .select(['customer.id', 'customer.username', 'customer.status', 'customer.text_password', 'customer.created_at'])
       .leftJoinAndMapOne(
         "customer.profile",
         Profile,
@@ -720,8 +726,15 @@ export class CustomerRepository extends Repository<Customer> {
         return { ...customer_user, accesses, roles }
       }));
 
+      // let decrypted_password: string = '';
+      // if(customer?.text_password !== null) {
+      //   decrypted_password = decrypt(encryptKey(), customer?.text_password);
+      // }
       return {
-        ...customer, customer_users, subscription: {
+        ...customer,
+        text_password: customer?.text_password,
+        customer_users,
+        subscription: {
           id: customer_subscription_result?.subscription?.id,
           name: customer_subscription_result?.subscription?.name,
           rate: customer_subscription_result?.subscription?.rate,
@@ -733,7 +746,7 @@ export class CustomerRepository extends Repository<Customer> {
     return response;
   }
 
-  async updateCustomer(dto: ICustomerPayload): Promise<ICustomerResponseDto> {
+  public async updateCustomer(dto: ICustomerPayload): Promise<ICustomerResponseDto> {
     const profile_repo = getCustomRepository(ProfileRepository);
     const customer_user_repo = getCustomRepository(CustomerUserRepository);
     const roles_repo = getCustomRepository(RolesRepository);
@@ -755,18 +768,19 @@ export class CustomerRepository extends Repository<Customer> {
       const customer = new Customer();
       let customer_subscription_exist: ICustomerSubscriptionDto;
 
-      const { address, company_address, company_name, firstname, lastname, phone_number, language, api_url, website_url, database_name } = dto?.profile;
+      const { address, company_address, company_name, firstname, lastname, phone, language, api_url, website_url, database_name } = dto?.profile;
       try {
         if (dto?.id) {
           customer.id = dto?.id;
         }
         customer.username = String(username).toLowerCase();
         if (password) {
-          customer.salt = await bcrypt.genSalt();
-          customer.password = await this.hashPassword(password, customer.salt);
-          customer.text_password = password;
+          const encrypted_password = crypt(encryptKey(), password);
+          const hash_password = await this.hashPassword(encrypted_password, existingCustomer.salt);
+          customer.password = hash_password;
+          customer.text_password = encrypted_password;
         }
-
+     
         if (existingCustomer?.status !== CustomerStatusType.Approved && api_url && website_url) {
           customer.status = CustomerStatusType.Ready;
         } else {
@@ -835,7 +849,7 @@ export class CustomerRepository extends Repository<Customer> {
           company_name,
           firstname,
           lastname,
-          phone_number,
+          phone,
           email: updated_customer?.username,
           customer: updated_customer,
           language,
@@ -949,7 +963,7 @@ export class CustomerRepository extends Repository<Customer> {
     return await this.getCustomerById(updated_customer?.id);
   }
 
-  async getRolessByCustomerId(customer_id: string): Promise<any[]> {
+  public async getRolessByCustomerId(customer_id: string): Promise<any[]> {
     const repo = getCustomRepository(RolesRepository);
     const query = repo.createQueryBuilder('customer_role');
     const results: any[] = await query
@@ -960,7 +974,7 @@ export class CustomerRepository extends Repository<Customer> {
     return results;
   }
 
-  async sendEmail(user: any): Promise<boolean> {
+  public async sendEmail(user: any): Promise<boolean> {
     const { username } = user;
     if (username && validateEmail(username)) {
       sgMail.setApiKey(sendGridConfig.api_key);

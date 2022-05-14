@@ -21,7 +21,6 @@ export interface IProfileDto {
   customer?: ICustomerDto;
   customer_user?: ICustomerUserDto;
   address?: string;
-  phone_number?: string;
   language?: string;
   api_url?: string;
   website_url?: string;

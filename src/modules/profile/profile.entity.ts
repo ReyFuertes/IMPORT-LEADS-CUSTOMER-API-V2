@@ -2,7 +2,7 @@ import { BaseEntity, PrimaryGeneratedColumn, Generated, ManyToOne, OneToOne, Col
 import { Customer } from "src/modules/customer/customer.entity";
 import { CustomerUser } from "../customer-user/customer-user.entity";
 
-@Entity({synchronize: false })
+@Entity({ synchronize: false })
 export class Profile extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')
@@ -18,7 +18,7 @@ export class Profile extends BaseEntity {
   language: string;
 
   @Column({ nullable: true })
-  phone_number: string;
+  phone: string;
 
   @Column({ nullable: true })
   address: string;
@@ -37,22 +37,22 @@ export class Profile extends BaseEntity {
 
   @Column({ nullable: true })
   qqid: string;
-  
+
   @Column({ nullable: true })
   company_name: string;
 
   @Column({ nullable: true })
   company_linkedin: string;
-  
+
   @Column({ nullable: true })
   company_address: string;
-  
+
   @Column({ nullable: true })
   self_intro: string;
-  
+
   @Column({ nullable: true })
   position: string;
-  
+
   @Column({ nullable: true })
   image: string;
 

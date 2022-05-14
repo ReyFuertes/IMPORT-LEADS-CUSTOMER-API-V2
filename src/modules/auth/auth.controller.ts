@@ -14,7 +14,6 @@ export class AuthController {
   }
 
   @Post('/signup')
-  // @UseGuards(AuthGuard('jwt'))
   signUp(@Body(ValidationPipe) dto: AuthCredentialDto, @Req() req: any): Promise<void> {
     return this.srv.signUp(dto, req?.customer)
   }

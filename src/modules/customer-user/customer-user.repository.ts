@@ -122,7 +122,7 @@ export class CustomerUserRepository extends Repository<CustomerUser> {
 
     const profile_query = profile_repo.createQueryBuilder('profile');
     const customer_user_profile: IProfileDto = await profile_query
-      .select(['id', 'firstname', 'lastname', 'language', 'phone_number', 'company_name', 'company_address', 'address'])
+      .select(['id', 'firstname', 'lastname', 'language', 'phone', 'company_name', 'company_address', 'address'])
       .where("customer_id = :customer_id", { customer_id: customer_user?.id })
       .getRawOne();
 

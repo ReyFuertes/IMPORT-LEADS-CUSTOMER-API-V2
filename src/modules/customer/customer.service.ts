@@ -10,6 +10,10 @@ export class CustomerService extends BaseService<Customer> {
   constructor(@InjectRepository(CustomerRepository) public repo: CustomerRepository) {
     super(repo);
   }
+
+  async updateStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
+    return await this.repo.updateStatus(dto);
+  }
   
   async isApiUrlExist(dto: any): Promise<boolean> {
     return await this.repo.isApiUrlExist(dto);
@@ -33,10 +37,6 @@ export class CustomerService extends BaseService<Customer> {
 
   async onInvite(dto: ICustomerDto[]): Promise<ICustomerDto[]> {
     return await this.repo.onInvite(dto);
-  }
-
-  async updateStatus(dto: CustomerUpdateStatus): Promise<ICustomerDto> {
-    return await this.repo.updateStatus(dto);
   }
 
   async deleteById(id: string): Promise<ICustomerDto> {
