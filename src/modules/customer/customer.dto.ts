@@ -28,12 +28,12 @@ export interface ICustomerResponseDto {
 }
 export interface ICustomerPayload {
   id?: string;
-  email_password: {
+  email_password?: {
     id?: string
     username: string;
     password: string;
   },
-  profile?: IProfileDto;
+  customer?: ICustomerUserDto;
   subscription: string;
   users?: ICustomerUserDto[];
 }

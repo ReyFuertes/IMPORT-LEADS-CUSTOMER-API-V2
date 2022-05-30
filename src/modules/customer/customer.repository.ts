@@ -22,8 +22,6 @@ import { emailConfirmationSender, emailConfirmationSubject, emailConfirmationTem
 import { CustomerSubscriptionRepository } from '../customer-subscription/customer-subscription.repository';
 import { ICustomerSubscriptionDto } from '../customer-subscription/customer-subscription.dto';
 import { Subscription } from '../subscription/subscription.entity';
-import { crypt, decrypt } from 'src/util/crypt';
-import { encryptKey } from 'src/helpers/constant';
 
 @EntityRepository(Customer)
 export class CustomerRepository extends Repository<Customer> {
@@ -162,9 +160,22 @@ export class CustomerRepository extends Repository<Customer> {
 
         const customer_user = new CustomerUser();
         customer_user.username = String(_customer_user?.username).toLowerCase();
-        customer_user.salt = await bcrypt.genSalt();
-        customer_user.password = await this.hashPassword(_customer_user?.password, customer_user.salt);
-        customer_user.text_password = _customer_user?.password;
+
+        //if exist then delete
+        if(customer_user?.username) {
+          const customer_user_exist = await customer_user_repo.find({
+            where: { username: customer_user.username }
+          });
+          if (customer_user_exist.length > 0) {
+            await customer_user_repo.delete(customer_user_exist?.map(value => value?.id));
+          }
+        }
+
+        if (_customer_user?.password) {
+          customer_user.salt = await bcrypt.genSalt();
+          customer_user.password = await this.hashPassword(_customer_user?.password, customer_user.salt);
+          customer_user.text_password = _customer_user?.password;
+        }
 
         let new_customer_user: ICustomerUserDto;
         try {
@@ -398,13 +409,14 @@ export class CustomerRepository extends Repository<Customer> {
 
     let new_customer: ICustomerDto;
     let sleepDelay: number = 0;
-    const { address, company_address, company_name, firstname, lastname, phone, language, api_url, website_url, database_name } = dto?.profile;
+
+    const { address, company_address, company_name, firstname, lastname, phone, language, api_url, website_url, database_name } = dto?.customer?.profile;
 
     try {
-      const { id, username, password } = dto?.email_password;
+      const { username, password } = dto?.customer;
       const customer = new Customer();
-      if (id) {
-        customer.id = id;
+      if (dto?.id) {
+        customer.id = dto?.id;
       } else {
         delete customer.id;
       }
@@ -412,11 +424,10 @@ export class CustomerRepository extends Repository<Customer> {
       customer.username = String(username).toLowerCase();
       if (password) {
         const salt = await bcrypt.genSalt();
-        const encrypted_password = crypt(encryptKey(), password);
-        const hash_password = await this.hashPassword(encrypted_password, customer.salt);
         customer.salt = salt;
+        const hash_password = await this.hashPassword(password, customer.salt);
         customer.password = hash_password;
-        customer.text_password = encrypted_password;
+        customer.text_password = password;
       }
 
       if (api_url && website_url) {
@@ -429,7 +440,7 @@ export class CustomerRepository extends Repository<Customer> {
       try {
         new_customer = await this.save(customer);
       } catch (error) {
-        throw new BadRequestException(`Customer failed: ${error}`);
+        throw new BadRequestException(`Customer create failed: ${error}`);
       }
 
       try {
@@ -580,7 +591,7 @@ export class CustomerRepository extends Repository<Customer> {
       return response;
 
     } catch (error) {
-      throw new BadRequestException(`Customer create failed: ${error}`);
+      throw new BadRequestException(`Customer info create failed: ${error}`);
     }
   }
 
@@ -759,28 +770,27 @@ export class CustomerRepository extends Repository<Customer> {
     let sleepDelay: number = 0;
 
     try {
-      const { username, password } = dto?.email_password;
+      const { id, username, password } = dto?.customer;
 
-      const existingCustomer = await this.findOne({ id: dto?.id });
+      const existingCustomer = await this.findOne(id);
       if (!existingCustomer) {
         throw new BadRequestException(`Customer doesnt exist.`);
       }
       const customer = new Customer();
       let customer_subscription_exist: ICustomerSubscriptionDto;
 
-      const { address, company_address, company_name, firstname, lastname, phone, language, api_url, website_url, database_name } = dto?.profile;
+      const { address, company_address, company_name, firstname, lastname, phone, language, api_url, website_url, database_name } = dto?.customer?.profile;
       try {
-        if (dto?.id) {
-          customer.id = dto?.id;
+        if (id) {
+          customer.id = id;
         }
         customer.username = String(username).toLowerCase();
         if (password) {
-          const encrypted_password = crypt(encryptKey(), password);
-          const hash_password = await this.hashPassword(encrypted_password, existingCustomer.salt);
+          const hash_password = await this.hashPassword(password, existingCustomer.salt);
           customer.password = hash_password;
-          customer.text_password = encrypted_password;
+          customer.text_password = password;
         }
-     
+
         if (existingCustomer?.status !== CustomerStatusType.Approved && api_url && website_url) {
           customer.status = CustomerStatusType.Ready;
         } else {
@@ -790,9 +800,9 @@ export class CustomerRepository extends Repository<Customer> {
         if (customer) {
           updated_customer = await this.save(customer);
         }
-
         customer_subscription_exist = await customer_subscription_repo.findOne({
-          where: { customer: { id: updated_customer?.id } }
+          where: { customer: { id: updated_customer?.id } },
+          relations: ['customer']
         });
       } catch (error) {
         throw new BadRequestException(`Customer update failed: ${error}`);
@@ -801,7 +811,7 @@ export class CustomerRepository extends Repository<Customer> {
       try {
         if (customer_subscription_exist && dto?.subscription) {
           const customer_subscription_payload = Object.assign(customer_subscription_exist, {
-            customer: { id: dto?.id },
+            customer: { id },
             subscription: { id: dto?.subscription }
           });
           if (customer_subscription_payload) {
